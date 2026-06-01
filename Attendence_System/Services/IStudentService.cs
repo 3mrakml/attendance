@@ -13,6 +13,7 @@ namespace Attendence_System.Services
         Task<Student> GetStudentByIdCollegeAsync(string idCollege);
         Task<bool> StudentExistsAsync(string idCollege);
         Task<Student> CreateStudentAsync(Student student);
+        Task<bool> UpdateStudentAsync(Student student);
         Task<bool> DeleteStudentAsync(int id);
         
         // Attendance logic

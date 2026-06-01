@@ -115,6 +115,14 @@
                                         <a href="@Url.Action("PrintCard", "Student", new { id = item.StudentId })" target="_blank" class="action-btn action-btn-info" title="طباعة البطاقة (ID)">
                                             <i data-lucide="id-card" class="w-4 h-4"></i>
                                         </a>
+                                        <button type="button" class="action-btn action-btn-info js-edit-student"
+                                                data-id="@item.StudentId"
+                                                data-name="@item.FullName"
+                                                data-age="@item.Age"
+                                                data-grade-id="@item.GradeId"
+                                                title="تعديل الطالب">
+                                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                                        </button>
                                         <button class="action-btn action-btn-danger js-delete" data-id="@item.StudentId" data-type="student" title="حذف الطالب">
                                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                                         </button>
@@ -137,6 +145,55 @@
                     }
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Student Modal -->
+<div id="editStudentModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="editStudentModalLabel" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" aria-hidden="true" onclick="document.getElementById('editStudentModal').classList.add('hidden')"></div>
+
+        <div class="relative bg-white rounded-2xl text-right overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full">
+            <div class="border-b border-slate-100 p-6 pb-4 flex justify-between items-center">
+                <h5 class="text-xl font-bold text-slate-800" id="editStudentModalLabel">تعديل بيانات الطالب</h5>
+                <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors" onclick="document.getElementById('editStudentModal').classList.add('hidden')">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form asp-controller="Student" asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="EditStudentId" name="StudentId" />
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label for="EditFullName" class="block text-sm font-semibold text-slate-700 mb-2">الاسم بالكامل</label>
+                        <input type="text" id="EditFullName" name="FullName" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900" required />
+                    </div>
+                    <div>
+                        <label for="EditAge" class="block text-sm font-semibold text-slate-700 mb-2">السن</label>
+                        <input type="number" id="EditAge" name="Age" min="1" max="120" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 text-left" dir="ltr" required />
+                    </div>
+                    <div>
+                        <label for="EditGradeId" class="block text-sm font-semibold text-slate-700 mb-2">الصف / الفرقة</label>
+                        <select id="EditGradeId" name="GradeId" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 bg-white">
+                            <option value="">-- اختر الصف --</option>
+                            @if (ViewBag.Grades != null)
+                            {
+                                foreach (var grade in ViewBag.Grades)
+                                {
+                                    <option value="@grade.GradeId">@grade.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="border-t border-slate-100 p-6 pt-4 flex gap-3">
+                    <button type="button" class="btn btn-neutral flex-1" onclick="document.getElementById('editStudentModal').classList.add('hidden')">إلغاء</button>
+                    <button type="submit" class="btn btn-primary flex-1">
+                        <i data-lucide="save" class="w-4 h-4"></i> حفظ التعديل
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -216,6 +273,17 @@
 
             $('#searchInput').on('keyup', filterTable);
             $('#gradeFilter').on('change', filterTable);
+
+            $(document).on('click', '.js-edit-student', function() {
+                var btn = $(this);
+
+                $('#EditStudentId').val(btn.attr('data-id'));
+                $('#EditFullName').val(btn.attr('data-name'));
+                $('#EditAge').val(btn.attr('data-age'));
+                $('#EditGradeId').val(btn.attr('data-grade-id'));
+
+                document.getElementById('editStudentModal').classList.remove('hidden');
+            });
         });
     </script>
 }

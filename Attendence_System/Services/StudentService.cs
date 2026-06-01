@@ -48,6 +48,19 @@ namespace Attendence_System.Services
             return student;
         }
 
+        public async Task<bool> UpdateStudentAsync(Student student)
+        {
+            var existingStudent = await _context.Students.FindAsync(student.StudentId);
+            if (existingStudent == null) return false;
+
+            existingStudent.FullName = student.FullName;
+            existingStudent.Age = student.Age;
+            existingStudent.GradeId = student.GradeId;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<bool> DeleteStudentAsync(int id)
         {
             var student = await _context.Students.FindAsync(id);

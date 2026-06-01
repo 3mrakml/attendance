@@ -66,6 +66,29 @@ namespace Attendence_System.Controllers
             return RedirectToAction("Index");
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(Student model)
+        {
+            ModelState.Remove("QRToken");
+
+            if (!ModelState.IsValid)
+            {
+                TempData["ErrorMessage"] = "حدث خطأ أثناء تعديل الطالب. يرجى التحقق من البيانات.";
+                return RedirectToAction("Index");
+            }
+
+            var success = await _studentService.UpdateStudentAsync(model);
+            if (!success)
+            {
+                TempData["ErrorMessage"] = "لم يتم العثور على الطالب المطلوب.";
+                return RedirectToAction("Index");
+            }
+
+            TempData["SuccessMessage"] = "تم تعديل بيانات الطالب بنجاح.";
+            return RedirectToAction("Index");
+        }
+
         [HttpGet]
         public async Task<IActionResult> Report(int id)
         {

@@ -20,7 +20,7 @@
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                         <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
                     </div>
-                    <input asp-for="FullName" class="w-full pr-10 pl-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-900" required placeholder="مثال: أحمد محمد علي" />
+                    <input asp-for="FullName" class="w-full pr-10 pl-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900" required placeholder="مثال: أحمد محمد علي" />
                 </div>
                 <span asp-validation-for="FullName" class="text-rose-500 text-sm mt-1 block font-medium"></span>
             </div>
@@ -33,7 +33,7 @@
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                         <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
                     </div>
-                    <input asp-for="Age" type="number" min="1" max="120" class="w-full pr-10 pl-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-900 text-left" dir="ltr" required placeholder="مثال: 20" />
+                    <input asp-for="Age" type="number" min="1" max="120" class="w-full pr-10 pl-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 text-left" dir="ltr" required placeholder="مثال: 20" />
                 </div>
                 <span asp-validation-for="Age" class="text-rose-500 text-sm mt-1 block font-medium"></span>
             </div>
@@ -44,7 +44,7 @@
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                         <i data-lucide="graduation-cap" class="w-4 h-4 text-slate-400"></i>
                     </div>
-                    <select asp-for="GradeId" required class="w-full pr-10 pl-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-900 appearance-none bg-white">
+                    <select asp-for="GradeId" required class="w-full pr-10 pl-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 appearance-none bg-white">
                         <option value="">-- اختر الصف --</option>
                         @if (ViewBag.Grades != null)
                         {
@@ -64,7 +64,7 @@
                 <button type="submit" class="flex-1 btn btn-primary flex items-center justify-center gap-2">
                     <i data-lucide="qr-code" class="w-5 h-5"></i> حفظ وتوليد QR
                 </button>
-                <a asp-action="Index" class="flex-1 text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center">
+                <a asp-action="Index" class="flex-1 btn btn-neutral">
                     العودة للقائمة
                 </a>
             </div>
