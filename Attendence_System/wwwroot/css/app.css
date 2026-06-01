@@ -1,0 +1,188 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Cairo', system-ui, -apple-system, sans-serif;
+  --color-primary: #0f1419;
+  --color-primary-hover: #1a1f24;
+  --color-primary-light: #f0f1f2;
+  --color-accent: #315f8f;
+  --color-accent-light: #d1e3f8;
+  --color-accent-red: #e11d48;
+  --color-accent-green: #059669;
+  --color-accent-amber: #d97706;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+  }
+  button {
+    cursor: pointer;
+  }
+}
+
+/* Glassmorphism utility */
+.glass {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+}
+
+.deleted {
+    background-color: #ffebee !important;
+    transform: scale(0.98);
+    opacity: 0.5;
+    transition: all 0.3s ease;
+}
+
+i[data-lucide] {
+    visibility: hidden;
+}
+
+/* Custom Scrollbar for modern look */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f5f9; 
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1; 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8; 
+}
+
+:root {
+    /* Primary Identity Variables */
+    --theme-primary-rgb: 15, 20, 25; /* #0f1419 */
+    --theme-primary-hover-rgb: 26, 31, 36;
+    --theme-primary-light-rgb: 240, 241, 242;
+    --theme-bg-base-rgb: 255, 255, 255;
+    --theme-bg-subtle-rgb: 248, 249, 250;
+    --theme-border-subtle-rgb: 217, 221, 226;
+    --theme-text-muted-rgb: 107, 114, 128;
+    --theme-accent-rgb: 49, 95, 143; /* #315f8f */
+    --theme-accent-light-rgb: 209, 227, 248;
+    --theme-accent-red-rgb: 180, 84, 73; /* #b45449 */
+    --theme-accent-green-rgb: 5, 150, 105;
+    --theme-accent-amber-rgb: 217, 119, 6;
+
+    --shadow-sm: 0 10px 24px -18px rgba(15, 20, 25, 0.22);
+    --shadow-md: 0 18px 38px -22px rgba(15, 20, 25, 0.28);
+    --ring: 0 0 0 4px rgba(22, 33, 43, 0.1);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    min-height: 2.75rem;
+    padding: 0.72rem 1.1rem;
+    border-radius: 0.95rem;
+    border: 1px solid transparent;
+    font-weight: 700;
+    font-size: 0.93rem;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, opacity 180ms ease, filter 180ms ease;
+    box-shadow: var(--shadow-sm);
+}
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    filter: saturate(1.03);
+}
+.btn:focus-visible {
+    outline: 0;
+    box-shadow: var(--ring), var(--shadow-md);
+}
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+.btn-primary {
+    color: #ffffff !important;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 52%),
+        linear-gradient(135deg, rgb(var(--theme-primary-rgb)), #233443);
+    border-color: rgba(15, 20, 25, 0.92) !important;
+}
+.btn-primary:hover {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 56%),
+        linear-gradient(135deg, rgb(var(--theme-primary-hover-rgb)), #2a3a49);
+    border-color: #22313f !important;
+}
+.btn-neutral {
+    color: rgb(var(--theme-primary-rgb)) !important;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(243, 245, 247, 0.94));
+    border-color: rgb(var(--theme-border-subtle-rgb)) !important;
+}
+.btn-neutral:hover {
+    background: linear-gradient(135deg, #ffffff, #f5f7f9);
+    border-color: #c6d0d8 !important;
+}
+.btn-success {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #3d6f9f, rgb(var(--theme-accent-rgb)));
+    border-color: #2d557d !important;
+}
+.btn-success:hover {
+    background: linear-gradient(135deg, #376793, #284e75);
+    border-color: #264968 !important;
+}
+.btn-danger {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #c96559, rgb(var(--theme-accent-red-rgb)));
+    border-color: #a8574b !important;
+}
+.btn-danger:hover {
+    background: linear-gradient(135deg, #bf5d52, #9c473d);
+    border-color: #93443b !important;
+}
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0;
+    border-radius: 0.5rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgb(var(--theme-primary-rgb));
+    transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+    line-height: 1;
+}
+.action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+    filter: saturate(1.03);
+}
+.action-btn-info {
+    color: rgb(var(--theme-primary-rgb));
+    background: rgba(15, 20, 25, 0.05);
+    border-color: rgba(15, 20, 25, 0.08);
+}
+.action-btn-info:hover {
+    background: rgba(15, 20, 25, 0.09);
+    border-color: rgba(15, 20, 25, 0.14);
+}
+.action-btn-danger {
+    color: rgb(var(--theme-accent-red-rgb));
+    background: rgba(180, 84, 73, 0.08);
+    border-color: rgba(180, 84, 73, 0.12);
+}
+.action-btn-danger:hover {
+    color: #9c473d;
+    background: rgba(180, 84, 73, 0.15);
+    border-color: rgba(180, 84, 73, 0.2);
+}

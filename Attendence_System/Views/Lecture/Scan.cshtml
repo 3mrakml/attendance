@@ -1,0 +1,194 @@
+@{
+    ViewData["Title"] = "مسح الغياب - " + ViewBag.LectureTitle;
+}
+
+<div class="space-y-8">
+    <div class="text-center">
+        <h2 class="text-3xl font-extrabold text-slate-800">مسح الغياب (QR Code)</h2>
+        <p class="text-indigo-600 mt-2 text-lg font-bold bg-indigo-50 inline-block px-4 py-1 rounded-full border border-indigo-100">@ViewBag.LectureTitle</p>
+    </div>
+    
+    @if (ViewBag.IsClosed)
+    {
+        <div class="bg-rose-50 border border-rose-200 p-6 rounded-2xl max-w-2xl mx-auto shadow-sm">
+            <div class="flex items-center justify-center flex-col text-center">
+                <div class="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center text-3xl mb-4">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <h3 class="text-xl font-bold text-rose-700 mb-2">الغياب مغلق</h3>
+                <p class="text-rose-600">تم إغلاق تسجيل الحضور لهذه المحاضرة.</p>
+            </div>
+            <div class="text-center mt-6">
+                <a asp-action="Index" asp-controller="Course" class="inline-block bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-8 rounded-xl shadow-md transition-all">العودة للمواد</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Right Side (RTL): Scanner Options -->
+            <div class="space-y-6">
+                <!-- Webcam Scanner -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4 flex items-center">
+                        <i class="bi bi-camera-video text-white text-xl ml-3"></i>
+                        <h5 class="text-white font-bold text-lg m-0">المسح بالكاميرا</h5>
+                    </div>
+                    <div class="p-6 text-center bg-slate-50">
+                        <div id="qr-reader" class="w-full max-w-md mx-auto bg-white rounded-xl overflow-hidden shadow-sm border border-slate-200"></div>
+                        <p class="text-slate-500 mt-4 text-sm font-medium"><i class="bi bi-info-circle ml-1"></i>يرجى السماح بصلاحية الكاميرا لقراءة الباركود</p>
+                    </div>
+                </div>
+
+                <!-- USB Scanner -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="bg-slate-700 px-6 py-4 flex items-center">
+                        <i class="bi bi-usb-symbol text-white text-xl ml-3"></i>
+                        <h5 class="text-white font-bold text-lg m-0">الماسح الضوئي (إدخال يدوي)</h5>
+                    </div>
+                    <div class="p-6 bg-slate-50">
+                        <label for="usbScannerInput" class="block text-sm font-bold text-slate-700 mb-3">اضغط هنا قبل المسح بجهاز الـ USB:</label>
+                        <div class="relative">
+                            <i class="bi bi-upc-scan absolute top-1/2 right-4 transform -translate-y-1/2 text-slate-400 text-xl"></i>
+                            <input type="text" id="usbScannerInput" class="w-full pr-12 pl-4 py-4 rounded-xl border-2 border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all font-mono text-center text-lg" placeholder="قم بمسح الباركود أو إدخال الكود..." autofocus dir="ltr" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Left Side (RTL): Status Log -->
+            <div class="h-full flex flex-col">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
+                    <div class="bg-emerald-500 px-6 py-4 flex justify-between items-center">
+                        <div class="flex items-center">
+                            <i class="bi bi-card-checklist text-white text-xl ml-3"></i>
+                            <h5 class="text-white font-bold text-lg m-0">سجل الحضور</h5>
+                        </div>
+                        <span class="bg-white text-emerald-700 text-sm font-bold px-3 py-1 rounded-full shadow-sm" id="scanCount">0 تم مسحه</span>
+                    </div>
+                    <div class="p-4 flex-1 bg-slate-50/50 overflow-y-auto min-h-[400px] max-h-[600px]">
+                        <ul id="scanLog" class="space-y-3">
+                            <!-- Logs will be prepended here -->
+                            <li class="text-center text-slate-400 text-sm mt-10" id="emptyLogMsg">لم يتم مسح أي حضور بعد.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-8 flex justify-center gap-4">
+            <a href="@Url.Action("Students", "Lecture", new { id = ViewBag.LectureId })" class="inline-flex items-center justify-center bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition-all transform hover:-translate-y-1">
+                <i class="bi bi-check-lg ml-2"></i>
+                إنهاء المسح
+            </a>
+            <a href="@Url.Action("Students", "Lecture", new { id = ViewBag.LectureId })" class="inline-flex items-center justify-center bg-white border-2 border-slate-200 hover:border-indigo-500 hover:text-indigo-600 text-slate-600 font-bold py-3.5 px-8 rounded-xl shadow-sm transition-all">
+                <i class="bi bi-people ml-2"></i>
+                عرض الطلاب
+            </a>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <script>
+        const lectureId = @ViewBag.LectureId;
+        const scanLog = document.getElementById('scanLog');
+        const scanCountEl = document.getElementById('scanCount');
+        const usbScannerInput = document.getElementById('usbScannerInput');
+        const emptyLogMsg = document.getElementById('emptyLogMsg');
+        let scanCount = 0;
+        let isProcessing = false;
+
+        const successBeep = new Audio('https://www.soundjay.com/buttons/beep-07.wav');
+        const errorBeep = new Audio('https://www.soundjay.com/buttons/beep-10.wav');
+
+        function addLog(message, isSuccess) {
+            if(emptyLogMsg) emptyLogMsg.style.display = 'none';
+            
+            const li = document.createElement('li');
+            li.className = isSuccess
+                ? "p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm flex items-start shadow-sm"
+                : "p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-800 text-sm flex items-start shadow-sm";
+                
+            const icon = isSuccess ? '<i class="bi bi-check-circle-fill text-emerald-500 ml-3 text-lg mt-0.5"></i>' : '<i class="bi bi-x-circle-fill text-rose-500 ml-3 text-lg mt-0.5"></i>';
+            
+            li.innerHTML = `
+                ${icon}
+                <div class="flex-1">
+                    <span class="block font-bold mb-1 opacity-75 text-xs" dir="ltr">${new Date().toLocaleTimeString()}</span>
+                    <span class="font-medium">${message}</span>
+                </div>
+            `;
+            scanLog.prepend(li);
+        }
+
+        function processScanResult(decodedText) {
+            if (isProcessing) return;
+            const studentId = decodedText.trim();
+            if (!studentId) return;
+            isProcessing = true;
+
+            fetch('/Lecture/RegisterAttendance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ LectureId: lectureId, IdCollege: studentId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    successBeep.play().catch(() => {});
+                    scanCount++;
+                    scanCountEl.innerText = `${scanCount} تم مسحه`;
+                    addLog(data.message, true);
+                } else {
+                    errorBeep.play().catch(() => {});
+                    addLog(data.message, false);
+                }
+            })
+            .catch(() => {
+                errorBeep.play().catch(() => {});
+                addLog('حدث خطأ في الاتصال بالخادم.', false);
+            })
+            .finally(() => {
+                setTimeout(() => {
+                    isProcessing = false;
+                    if (usbScannerInput) {
+                        usbScannerInput.value = '';
+                        usbScannerInput.focus();
+                    }
+                }, 1500);
+            });
+        }
+
+        @if (!ViewBag.IsClosed) {
+            <text>
+            const html5QrCode = new Html5Qrcode("qr-reader");
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => processScanResult(decodedText),
+                (errorMessage) => { /* ignore frame errors */ }
+            ).catch(err => {
+                console.error("Camera start failed", err);
+                document.getElementById("qr-reader").innerHTML = `<div class="p-4 text-rose-500 font-bold"><i class="bi bi-camera-video-off text-2xl block mb-2"></i>تعذر تشغيل الكاميرا. يرجى التأكد من السماح بالصلاحيات.</div>`;
+            });
+            </text>
+        }
+
+        if (usbScannerInput) {
+            usbScannerInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    processScanResult(this.value);
+                }
+            });
+            document.body.addEventListener('click', (e) => {
+                if (!e.target.closest('#qr-reader')) {
+                    usbScannerInput.focus();
+                }
+            });
+        }
+    </script>
+}

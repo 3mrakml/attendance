@@ -1,0 +1,27 @@
+## Visual Studio
+.vs/
+*.user
+*.suo
+
+## Build output
+bin/
+obj/
+
+## Node
+node_modules/
+npm-debug.log*
+
+## Publish and deployment profiles
+**/Properties/PublishProfiles/
+**/Properties/serviceDependencies.local.json
+**/Properties/serviceDependencies.local.json.user
+
+## Local settings and secrets
+appsettings.Local.json
+*.db
+*.sqlite
+*.sqlite3
+
+## OS files
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,101 @@
+@using Attendence_System.ViewModel
+@model CourseWithStudentsViewModel
+
+@{
+    ViewData["Title"] = "إحصائيات المادة - " + Model.CourseTitle;
+}
+
+<div class="space-y-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div>
+            <h4 class="text-lg md:text-xl font-bold text-slate-500 mb-1">الطلاب المسجلين وحضورهم في كورس</h4>
+            <h3 class="text-2xl md:text-3xl font-extrabold text-slate-800">@Model.CourseTitle</h3>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row w-full md:w-auto gap-3 mt-2 md:mt-0">
+            <a href="@Url.Action("ViewLectures", "Course", new { id = Model.CourseId })" class="inline-flex items-center justify-center w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition-all gap-2">
+                <i class="bi bi-collection-play"></i> المحاضرات
+            </a>
+            
+            <a href="@Url.Action("ExportCourseAttendance", "Course", new { id = Model.CourseId })" class="inline-flex items-center justify-center w-full sm:w-auto rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white font-bold px-6 py-2.5 shadow-sm transition-all focus:outline-none">
+                <i class="bi bi-file-earmark-excel ml-2"></i> تصدير البيانات (Excel)
+            </a>
+        </div>
+    </div>
+
+    <!-- Students Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table id="studentsTable" class="min-w-full divide-y divide-slate-100">
+                <thead class="bg-slate-50/50">
+                    <tr>
+                        <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الاسم</th>
+                        <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الرقم الجامعي</th>
+                        <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">السن</th>
+                        <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">عدد مرات الحضور</th>
+                        <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-slate-100">
+                    @if (Model.StudentsWithCount != null && Model.StudentsWithCount.Any())
+                    {
+                        @foreach (var student in Model.StudentsWithCount)
+                        {
+                            <tr class="hover:bg-slate-50/80 transition-colors group js-delete-parent">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center font-bold">
+                                            @student.FullName?.FirstOrDefault()
+                                        </div>
+                                        <div class="mr-4">
+                                            <div class="text-sm font-bold text-slate-900">@student.FullName</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-600" dir="ltr" style="text-align: right;">@student.QRToken</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-600" dir="ltr" style="text-align: right;">@student.Age</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex justify-center">
+                                        <span class="px-4 py-1 inline-flex text-sm leading-5 font-bold rounded-full bg-indigo-100 text-indigo-700">
+                                            @student.Count مرات
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                    <button class="bg-white hover:bg-rose-50 text-slate-300 hover:text-rose-600 p-2 rounded-lg transition-colors border border-transparent hover:border-rose-100 js-delete" data-id="@student.StudentId" data-type="student" title="حذف الطالب">
+                                        <i class="bi bi-trash3 text-lg"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="px-6 py-16 text-center">
+                                <div class="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                                    <i class="bi bi-graph-down"></i>
+                                </div>
+                                <h4 class="text-lg font-bold text-slate-700">لا توجد إحصائيات بعد</h4>
+                                <p class="text-slate-500 mt-1">لم يتم تسجيل حضور أي طالب في أي محاضرة ضمن هذا الكورس.</p>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <script>
+        function exportToExcel() {
+            var table = document.getElementById('studentsTable');
+            var wb = XLSX.utils.table_to_book(table, { sheet: "Students Attendance" });
+            XLSX.writeFile(wb, 'Course_Attendance_@(Model.CourseTitle).xlsx');
+        }
+    </script>
+}

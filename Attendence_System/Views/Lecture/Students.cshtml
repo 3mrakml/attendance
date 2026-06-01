@@ -1,0 +1,140 @@
+@using Attendence_System.ViewModel
+@model LectureWithStudentsViewModel
+
+@{
+    ViewData["Title"] = "حضور المحاضرة - " + Model.LectureTitle;
+}
+
+<div class="space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div>
+            <h4 class="text-lg md:text-xl font-bold text-slate-500 mb-1">الطلاب المسجلين في المحاضرة</h4>
+            <h3 class="text-2xl md:text-3xl font-extrabold text-slate-800">@Model.LectureTitle</h3>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row w-full md:w-auto gap-3 mt-2 md:mt-0">
+            <a href="@Url.Action("Scan", "Lecture", new { id = Model.lectureid })" class="btn btn-primary w-full sm:w-auto">
+                <i data-lucide="scan-qr-code" class="w-4 h-4"></i> العودة للمسح
+            </a>
+            
+            <a href="@Url.Action("ExportLectureAttendance", "Lecture", new { id = Model.lectureid })" class="btn btn-success w-full sm:w-auto">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> تصدير البيانات (Excel)
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center text-xl">
+                <i data-lucide="users" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-slate-500">إجمالي الطلاب في الصف</p>
+                <p class="text-2xl font-black text-slate-800">@Model.TotalStudents</p>
+            </div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-emerald-100 flex items-center gap-4 relative overflow-hidden">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl relative z-10">
+                <i data-lucide="check" class="w-5 h-5"></i>
+            </div>
+            <div class="relative z-10">
+                <p class="text-sm font-semibold text-emerald-700">الحضور</p>
+                <p class="text-2xl font-black text-emerald-900">@Model.AttendedCount</p>
+            </div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-rose-100 flex items-center gap-4 relative overflow-hidden">
+            <div class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl relative z-10">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </div>
+            <div class="relative z-10">
+                <p class="text-sm font-semibold text-rose-700">الغياب</p>
+                <p class="text-2xl font-black text-rose-900">@Model.AbsentCount</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Students Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table id="studentsTable" class="min-w-full divide-y divide-slate-100">
+                <thead class="bg-slate-50/50">
+                    <tr>
+                        <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الاسم</th>
+                        <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">الحالة</th>
+                        <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">وقت الحضور</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-slate-100">
+                    @if (Model.Students != null && Model.Students.Any())
+                    {
+                        @foreach (var status in Model.Students)
+                        {
+                            <tr class="hover:bg-slate-50/80 transition-colors group">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
+                                            @status.Student.FullName?.FirstOrDefault()
+                                        </div>
+                                        <div class="mr-4">
+                                            <div class="text-sm font-bold text-slate-900">@status.Student.FullName</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    @if (status.IsAttended)
+                                    {
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
+                                            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> حضر
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200 shadow-sm">
+                                            <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> غائب
+                                        </span>
+                                    }
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium">
+                                    @if (status.IsAttended && status.AttendedAt.HasValue)
+                                    {
+                                        <span dir="ltr" class="inline-block">@status.AttendedAt.Value.ToString("hh:mm tt")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-slate-300">-</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="px-6 py-16 text-center">
+                                <div class="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                                    <i class="bi bi-people"></i>
+                                </div>
+                                <h4 class="text-lg font-bold text-slate-700">لا يوجد طلاب</h4>
+                                <p class="text-slate-500 mt-1">لا يوجد طلاب مسجلين في الصف الخاص بهذه المحاضرة.</p>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <script>
+        function exportToExcel() {
+            var table = document.getElementById('studentsTable');
+            var wb = XLSX.utils.table_to_book(table, { sheet: "Attendance" });
+            XLSX.writeFile(wb, 'Lecture_Attendance_@(Model.LectureTitle).xlsx');
+        }
+    </script>
+}

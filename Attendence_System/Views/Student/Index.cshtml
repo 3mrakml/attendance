@@ -1,0 +1,221 @@
+@model IEnumerable<Attendence_System.Models.Student>
+
+@{
+    ViewData["Title"] = "إدارة الطلاب";
+}
+
+<div class="space-y-8">
+    <div class="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div class="mb-4 md:mb-0">
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800">قائمة الطلاب</h2>
+            <p class="text-slate-500 mt-1 text-sm sm:text-base">إدارة سجلات الطلاب ورموز QR الخاصة بهم.</p>
+        </div>
+        <div class="mt-2 md:mt-0">
+            <button type="button" onclick="document.getElementById('addStudentModal').classList.remove('hidden')" class="btn btn-primary w-full md:w-auto">
+                <i data-lucide="user-plus" class="w-4 h-4"></i> إضافة طالب جديد
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4">
+        <div class="flex-1 relative">
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+            </div>
+            <input type="text" id="searchInput" class="w-full pr-10 pl-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900" placeholder="البحث بالاسم أو المعرف..." />
+        </div>
+        <div class="sm:w-64 relative">
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <i data-lucide="funnel" class="w-4 h-4 text-slate-400"></i>
+            </div>
+            <select id="gradeFilter" class="w-full pr-10 pl-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 appearance-none bg-white">
+                <option value="">كل الصفوف</option>
+                @if (ViewBag.Grades != null)
+                {
+                    foreach (var grade in ViewBag.Grades)
+                    {
+                        <option value="@grade.Name">@grade.Name</option>
+                    }
+                }
+            </select>
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-100">
+                <thead class="bg-slate-50/50">
+                    <tr>
+                        <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">المعرف</th>
+                        <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الاسم بالكامل</th>
+                        <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الفرقة/الصف</th>
+                        <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">نسبة الحضور</th>
+                        <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">رقم QR</th>
+                        <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-slate-100">
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr class="hover:bg-slate-50/80 transition-colors group js-delete-parent">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium">#@item.StudentId</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <a asp-action="Report" asp-route-id="@item.StudentId" class="flex items-center hover:bg-slate-50 p-2 -ml-2 rounded-xl transition-colors group/link cursor-pointer">
+                                        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold group-hover/link:bg-primary group-hover/link:text-white transition-colors">
+                                            @item.FullName?.FirstOrDefault()
+                                        </div>
+                                        <div class="mr-4">
+                                            <div class="text-sm font-bold text-slate-900 group-hover/link:text-primary transition-colors">@item.FullName</div>
+                                        </div>
+                                    </a>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if (item.Grade != null)
+                                    {
+                                        <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-amber-100 text-amber-800">
+                                            @item.Grade.Name
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-slate-400 text-sm font-medium">غير محدد</span>
+                                    }
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    @{
+                                        double percentage = ViewBag.AttendancePercentages != null && ViewBag.AttendancePercentages.ContainsKey(item.StudentId) 
+                                            ? ViewBag.AttendancePercentages[item.StudentId] 
+                                            : 0;
+                                        
+                                        string badgeClass = percentage >= 85 ? "bg-emerald-100 text-emerald-800 border border-emerald-200" 
+                                                          : percentage >= 50 ? "bg-amber-100 text-amber-800 border border-amber-200" 
+                                                          : "bg-rose-100 text-rose-800 border border-rose-200";
+                                    }
+                                    <span class="inline-flex items-center px-3 py-1 rounded-xl text-sm font-bold @badgeClass">
+                                        @percentage%
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-black text-primary" dir="ltr">
+                                    @item.QRToken
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                    <div class="flex items-center justify-center gap-2">
+                                        @if (ViewBag.StudentQRCodes != null && ViewBag.StudentQRCodes.ContainsKey(item.StudentId))
+                                        {
+                                            <a href="@ViewBag.StudentQRCodes[item.StudentId]" download="Student_QR_@item.QRToken" class="action-btn action-btn-info" title="تحميل رمز QR">
+                                                <i data-lucide="download" class="w-4 h-4"></i>
+                                            </a>
+                                        }
+                                        <a href="@Url.Action("PrintCard", "Student", new { id = item.StudentId })" target="_blank" class="action-btn action-btn-info" title="طباعة البطاقة (ID)">
+                                            <i data-lucide="id-card" class="w-4 h-4"></i>
+                                        </a>
+                                        <button class="action-btn action-btn-danger js-delete" data-id="@item.StudentId" data-type="student" title="حذف الطالب">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="px-6 py-16 text-center">
+                                <div class="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">
+                                    <i data-lucide="users" class="w-8 h-8"></i>
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-700">لا يوجد طلاب مضافين بعد</h3>
+                                <p class="text-slate-500 mt-1 max-w-sm mx-auto">قم بإضافة الطلاب الجدد وسجل بياناتهم الأكاديمية لاستخراج رموز الحضور الخاصة بهم.</p>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Student Modal -->
+<div id="addStudentModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="addStudentModalLabel" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" aria-hidden="true" onclick="document.getElementById('addStudentModal').classList.add('hidden')"></div>
+
+        <div class="relative bg-white rounded-2xl text-right overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full">
+            <div class="border-b border-slate-100 p-6 pb-4 flex justify-between items-center">
+                <h5 class="text-xl font-bold text-slate-800" id="addStudentModalLabel">إضافة طالب جديد</h5>
+                <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors" onclick="document.getElementById('addStudentModal').classList.add('hidden')">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form asp-controller="Student" asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label for="FullName" class="block text-sm font-semibold text-slate-700 mb-2">الاسم بالكامل</label>
+                        <input type="text" id="FullName" name="FullName" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900" required placeholder="مثال: أحمد محمد علي" />
+                    </div>
+                    <div>
+                        <label for="Age" class="block text-sm font-semibold text-slate-700 mb-2">السن</label>
+                        <input type="number" id="Age" name="Age" min="1" max="120" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 text-left" dir="ltr" required placeholder="مثال: 20" />
+                    </div>
+                    <div>
+                        <label for="GradeId" class="block text-sm font-semibold text-slate-700 mb-2">الصف / الفرقة</label>
+                        <select id="GradeId" name="GradeId" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 bg-white">
+                            <option value="">-- اختر الصف --</option>
+                            @if (ViewBag.Grades != null)
+                            {
+                                foreach (var grade in ViewBag.Grades)
+                                {
+                                    <option value="@grade.GradeId">@grade.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="border-t border-slate-100 p-6 pt-4 flex gap-3">
+                    <button type="button" class="btn btn-neutral flex-1" onclick="document.getElementById('addStudentModal').classList.add('hidden')">إلغاء</button>
+                    <button type="submit" class="btn btn-primary flex-1">
+                        <i data-lucide="qr-code" class="w-4 h-4"></i> حفظ وتوليد
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            function filterTable() {
+                var searchTerm = $('#searchInput').val().toLowerCase();
+                var selectedGrade = $('#gradeFilter').val();
+
+                $('tbody tr.js-delete-parent').each(function() {
+                    // id in column 0, name in column 1, grade in column 2, qr in column 3
+                    var rowText = $(this).find('td:eq(0)').text().toLowerCase() + " " + 
+                                  $(this).find('td:eq(1)').text().toLowerCase() + " " +
+                                  $(this).find('td:eq(3)').text().toLowerCase();
+                    var gradeText = $(this).find('td:eq(2)').text().trim();
+                    
+                    var matchesSearch = searchTerm === "" || rowText.indexOf(searchTerm) > -1;
+                    var matchesGrade = selectedGrade === "" || gradeText === selectedGrade;
+
+                    if (matchesSearch && matchesGrade) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+            }
+
+            $('#searchInput').on('keyup', filterTable);
+            $('#gradeFilter').on('change', filterTable);
+        });
+    </script>
+}

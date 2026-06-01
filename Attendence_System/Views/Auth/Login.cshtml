@@ -1,0 +1,97 @@
+@model Attendence_System.ViewModel.LoginViewModel
+@{
+    ViewData["Title"] = "تسجيل الدخول";
+    ViewData["Subtitle"] = "أهلاً بك مجدداً، أدخل بياناتك للمتابعة.";
+    ViewData["BrandBadge"] = "نظام متكامل";
+    ViewData["BrandTitle"] = "أدر الحضور <br/> <span class=\"text-slate-400\">بذكاء وفعالية.</span>";
+    ViewData["BrandDescription"] = "نظام الحضور يوفر لك كل ما تحتاجه لإدارة الطلاب، المحاضرات، والتقارير في منصة واحدة سهلة الاستخدام.";
+    ViewData["BrandShowFeatures"] = false;
+    ViewData["AuthBgImage"] = "~/images/login-bg-dark.png";
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+}
+
+<form asp-controller="Auth" asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post" class="space-y-6">
+    @Html.AntiForgeryToken()
+
+    @if (!ViewData.ModelState.IsValid && ViewData.ModelState[string.Empty]?.Errors.Count > 0)
+    {
+        <div class="p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm font-bold flex items-center gap-3">
+            <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0"></i>
+            <div>
+                @foreach (var error in ViewData.ModelState[string.Empty].Errors)
+                {
+                    <p>@error.ErrorMessage</p>
+                }
+            </div>
+        </div>
+    }
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="p-4 rounded-xl bg-green-50 border border-green-100 text-green-600 text-sm font-bold flex items-center gap-3">
+            <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0"></i>
+            <p>@TempData["SuccessMessage"]</p>
+        </div>
+    }
+
+    <div class="space-y-2">
+        <label asp-for="Email" class="text-sm font-bold text-slate-500 mr-1">البريد الإلكتروني أو اسم المستخدم</label>
+        <div class="relative">
+            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <i data-lucide="mail" class="w-5 h-5"></i>
+            </span>
+            <input asp-for="Email" class="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pr-12 pl-4 text-slate-800 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium" placeholder="name@example.com" dir="ltr" />
+        </div>
+        <span asp-validation-for="Email" class="text-red-500 text-xs font-bold mr-1 block"></span>
+    </div>
+
+    <div class="space-y-2">
+        <label asp-for="Password" class="text-sm font-bold text-slate-500 mr-1">كلمة المرور</label>
+        <div class="relative">
+            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <i data-lucide="lock" class="w-5 h-5"></i>
+            </span>
+            <input asp-for="Password" type="password" id="passwordInput" class="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pr-12 pl-12 text-slate-800 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium placeholder:tracking-widest" placeholder="••••••••" dir="ltr" />
+            <button type="button" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-800 transition-all toggle-password" data-target="passwordInput">
+                <i data-lucide="eye" class="w-5 h-5 eye-open"></i>
+                <i data-lucide="eye-off" class="w-5 h-5 eye-closed hidden"></i>
+            </button>
+        </div>
+        <span asp-validation-for="Password" class="text-red-500 text-xs font-bold mr-1 block"></span>
+    </div>
+
+    <div class="flex items-center justify-start py-2">
+        <label class="flex items-center gap-2 cursor-pointer group">
+            <div class="relative flex items-center justify-center">
+                <input asp-for="RememberMe" class="peer appearance-none w-5 h-5 border-2 border-slate-200 rounded-md checked:bg-primary checked:border-primary transition-all">
+                <i data-lucide="check" class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></i>
+            </div>
+            <span class="text-sm font-bold text-slate-500 group-hover:text-slate-800 transition-all">تذكرني</span>
+        </label>
+    </div>
+
+    <button type="submit" id="btn-submit-signin" class="w-full bg-primary text-white py-4 rounded-2xl font-black text-lg hover:bg-primary-hover hover:scale-[1.01] active:scale-[0.98] transition-all shadow-xl shadow-primary/20">
+        تسجيل الدخول
+    </button>
+
+    <p class="text-center text-slate-500 font-bold text-sm pt-4">
+        ليس لديك حساب؟
+        <a asp-controller="Auth" asp-action="Register" data-direction="left" class="text-slate-800 underline underline-offset-4 hover:text-primary transition-colors auth-switch-link">أنشئ حساباً الآن</a>
+    </p>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function() {
+            $('form').on('submit', function() {
+                if ($(this).valid()) {
+                    const btn = $('#btn-submit-signin');
+                    btn.prop('disabled', true);
+                    btn.html('<span class="flex items-center justify-center gap-2"><i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> جاري تسجيل الدخول...</span>');
+                    lucide.createIcons();
+                }
+            });
+        });
+    </script>
+}

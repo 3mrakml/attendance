@@ -1,0 +1,98 @@
+@model IEnumerable<Attendence_System.Models.Grade>
+
+@{
+    ViewData["Title"] = "إدارة الصفوف الدراسية";
+}
+
+<div class="space-y-8">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-extrabold text-slate-800">إدارة الصفوف الدراسية</h2>
+            <p class="text-slate-500 mt-1">أضف الفرق أو الصفوف الدراسية لتنظيم الطلاب والمواد.</p>
+        </div>
+        
+        <!-- Add New Grade Button -->
+        <button type="button" onclick="document.getElementById('addGradeModal').classList.remove('hidden')" class="btn btn-primary">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            إضافة صف جديد
+        </button>
+    </div>
+
+    <!-- Grades Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        @if (Model != null && Model.Any())
+        {
+            @foreach (var grade in Model)
+            {
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 group flex flex-col h-full relative overflow-hidden js-delete-parent">
+                    <!-- Decorative element -->
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-amber-100/50 to-transparent rounded-bl-full -mr-4 -mt-4 opacity-50"></div>
+                    
+                    <div class="flex items-start justify-between mb-4 relative z-10">
+                        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl shadow-sm">
+                            <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                        </div>
+                        <button type="button" class="action-btn action-btn-danger js-delete" data-id="@grade.GradeId" data-type="grade" title="حذف الصف">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">@grade.Name</h3>
+                    <div class="mt-4 flex gap-4 text-sm font-medium text-slate-500">
+                        <div class="flex items-center gap-1 bg-slate-50 px-3 py-1 rounded-lg">
+                            <i data-lucide="users" class="w-4 h-4 text-primary"></i>
+                            <span>@grade.Students?.Count طلاب</span>
+                        </div>
+                        <div class="flex items-center gap-1 bg-slate-50 px-3 py-1 rounded-lg">
+                            <i data-lucide="book-open" class="w-4 h-4 text-success"></i>
+                            <span>@grade.CourseGrades?.Count مواد</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-span-full text-center py-16 bg-white rounded-2xl border border-slate-200 border-dashed">
+                <div class="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                    <i data-lucide="network" class="w-8 h-8"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-700">لا توجد صفوف مضافة بعد</h3>
+                <p class="text-slate-500 mt-1 max-w-sm mx-auto">قم بإضافة الصفوف (مثل: الفرقة الأولى، الفرقة الثانية) للبدء في تنظيم النظام.</p>
+                <button type="button" onclick="document.getElementById('addGradeModal').classList.remove('hidden')" class="btn btn-primary mt-6">
+                    إضافة صف الآن
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Add Grade Modal (Tailwind) -->
+<div id="addGradeModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="addGradeModalLabel" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" aria-hidden="true" onclick="document.getElementById('addGradeModal').classList.add('hidden')"></div>
+
+        <!-- Modal panel -->
+        <div class="relative bg-white rounded-2xl text-right overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full">
+            <div class="border-b border-slate-100 p-6 pb-4 flex justify-between items-center">
+                <h5 class="text-xl font-bold text-slate-800" id="addGradeModalLabel">إضافة صف دراسي جديد</h5>
+                <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors" onclick="document.getElementById('addGradeModal').classList.add('hidden')">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form asp-controller="Grade" asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <div class="p-6">
+                    <label for="Name" class="block text-sm font-semibold text-slate-700 mb-2">اسم الصف / الفرقة</label>
+                    <input type="text" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900" placeholder="مثال: الفرقة الأولى" id="Name" name="Name" required autofocus />
+                </div>
+                <div class="border-t border-slate-100 p-6 pt-4 flex gap-3">
+                    <button type="button" class="btn btn-neutral flex-1" onclick="document.getElementById('addGradeModal').classList.add('hidden')">إلغاء</button>
+                    <button type="submit" class="btn btn-primary flex-1">إضافة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

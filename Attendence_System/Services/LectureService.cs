@@ -1,0 +1,82 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Attendence_System.Data;
+using Attendence_System.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace Attendence_System.Services
+{
+    public class LectureService : ILectureService
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly IQRCodeService _qrCodeService;
+
+        public LectureService(ApplicationDbContext context, IQRCodeService qrCodeService)
+        {
+            _context = context;
+            _qrCodeService = qrCodeService;
+        }
+
+        public async Task<List<Lecture>> GetLecturesByCourseAsync(int courseId)
+        {
+            return await _context.Lectures
+                .AsNoTracking()
+                .Include(l => l.Grade)
+                .Where(l => l.CourseId == courseId)
+                .ToListAsync();
+        }
+
+        public async Task<Lecture> GetLectureByIdAsync(int id)
+        {
+            return await _context.Lectures
+                .Include(l => l.Course)
+                .FirstOrDefaultAsync(l => l.LectureId == id);
+        }
+
+        public async Task<Lecture> CreateLectureAsync(Lecture lecture)
+        {
+            _context.Lectures.Add(lecture);
+            await _context.SaveChangesAsync();
+
+            // Generate QR code with the newly generated ID
+            lecture.QRCode = _qrCodeService.GenerateQRCode(lecture.LectureId.ToString());
+            _context.Lectures.Update(lecture);
+            await _context.SaveChangesAsync();
+
+            return lecture;
+        }
+
+        public async Task<bool> CloseAttendanceAsync(int lectureId)
+        {
+            var lecture = await _context.Lectures.FindAsync(lectureId);
+            if (lecture != null)
+            {
+                lecture.IsAttendanceClosed = true;
+                _context.Lectures.Update(lecture);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            return false;
+        }
+
+        public async Task<bool> DeleteLectureAsync(int lectureId)
+        {
+            var lecture = await _context.Lectures.FindAsync(lectureId);
+            if (lecture == null) return false;
+
+            _context.Lectures.Remove(lecture);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<Student>> GetStudentsInLectureAsync(int lectureId)
+        {
+            return await _context.StudentLectures
+                .Where(sl => sl.LectureId == lectureId)
+                .Include(sl => sl.Student)
+                .Select(sl => sl.Student)
+                .ToListAsync();
+        }
+    }
+}

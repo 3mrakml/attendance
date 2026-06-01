@@ -1,0 +1,76 @@
+@model Attendence_System.ViewModel.CourseViewModel
+
+<div class="space-y-8">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-extrabold text-slate-800">إدارة المواد</h2>
+            <p class="text-slate-500 mt-1">أضف مواد دراسية جديدة أو أدر المواد الحالية الخاصة بك.</p>
+        </div>
+        
+        <!-- Add New Course Button -->
+        <button type="button" onclick="document.getElementById('addCourseModal').classList.remove('hidden')" class="btn btn-primary">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            إضافة مادة جديدة
+        </button>
+    </div>
+
+    <!-- Courses Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        @if (Model.Courses != null && Model.Courses.Any())
+        {
+            @foreach (var course in Model.Courses)
+            {
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 group flex flex-col h-full relative overflow-hidden js-delete-parent">
+                    <!-- Decorative element -->
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full -mr-4 -mt-4 opacity-50"></div>
+                    
+                    <div class="flex items-start justify-between mb-4 relative z-10">
+                        <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xl shadow-sm">
+                            <i data-lucide="book-text" class="w-5 h-5"></i>
+                        </div>
+                        <button type="button" class="action-btn action-btn-danger js-delete" data-id="@course.CourseId" data-type="course" title="حذف المادة">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">@course.Name</h3>
+                    
+                    @if (course.CourseGrades != null && course.CourseGrades.Any())
+                    {
+                        <div class="flex flex-wrap gap-1 mb-3">
+                            @foreach (var cg in course.CourseGrades)
+                            {
+                                <span class="px-2 py-1 bg-success/10 text-success text-xs font-bold rounded-md">@cg.Grade?.Name</span>
+                            }
+                        </div>
+                    }
+                    
+                    <p class="text-slate-500 text-sm mb-6 flex-grow">إدارة المحاضرات وسجلات الحضور الخاصة بهذه المادة.</p>
+                    
+                    <form method="get" asp-controller="Course" asp-action="ViewLectures" asp-route-id="@course.CourseId" class="mt-auto w-full">
+                        <button type="submit" class="btn btn-neutral w-full group/btn">
+                            عرض المحاضرات
+                            <i data-lucide="arrow-left" class="w-4 h-4 group-hover/btn:-translate-x-1 transition-transform"></i>
+                        </button>
+                    </form>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-span-full text-center py-16 bg-white rounded-2xl border border-slate-200 border-dashed">
+                <div class="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                    <i data-lucide="book-x" class="w-8 h-8"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-700">لا توجد مواد مضافة بعد</h3>
+                <p class="text-slate-500 mt-1 max-w-sm mx-auto">قم بإضافة مادتك الأولى لتبدأ في تسجيل حضور الطلاب وإدارة المحاضرات.</p>
+                <button type="button" onclick="document.getElementById('addCourseModal').classList.remove('hidden')" class="btn btn-primary mt-6">
+                    إضافة مادة الآن
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+<partial name="_AddCoursePartial" model="Model" />

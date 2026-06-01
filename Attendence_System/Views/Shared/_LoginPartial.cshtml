@@ -1,0 +1,38 @@
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<AppUser> SignInManager
+@inject UserManager<AppUser> UserManager
+
+<ul class="space-y-2">
+@if (SignInManager.IsSignedIn(User))
+{
+    <li>
+        <form class="m-0 p-0" asp-controller="Auth" asp-action="Logout" method="post">
+            <button type="submit" class="w-full flex items-center px-4 py-3 rounded-xl transition-all duration-300 text-rose-400 hover:bg-white/10 hover:text-rose-300 hover:-translate-x-1 font-semibold group">
+                <div class="w-8 h-8 rounded-lg bg-white/10 text-rose-400 flex items-center justify-center ml-3 group-hover:bg-white/20 group-hover:text-rose-300 transition-colors">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </div>
+                تسجيل الخروج
+            </button>
+        </form>
+    </li>
+}
+else
+{
+    <li>
+        <a class="flex items-center px-4 py-3 rounded-xl transition-all duration-300 text-slate-300 hover:bg-white/10 hover:text-white hover:-translate-x-1 font-semibold group" asp-controller="Auth" asp-action="Register">
+            <div class="w-8 h-8 rounded-lg bg-white/10 text-slate-300 flex items-center justify-center ml-3 group-hover:bg-white/20 group-hover:text-white transition-colors">
+                <i data-lucide="user-plus" class="w-4 h-4"></i>
+            </div>
+            إنشاء حساب
+        </a>
+    </li>
+    <li>
+        <a class="flex items-center px-4 py-3 rounded-xl transition-all duration-300 text-slate-300 hover:bg-white/10 hover:text-white hover:-translate-x-1 font-semibold group" asp-controller="Auth" asp-action="Login">
+            <div class="w-8 h-8 rounded-lg bg-white/10 text-slate-300 flex items-center justify-center ml-3 group-hover:bg-white/20 group-hover:text-white transition-colors">
+                <i data-lucide="log-in" class="w-4 h-4"></i>
+            </div>
+            تسجيل الدخول
+        </a>
+    </li>
+}
+</ul>
