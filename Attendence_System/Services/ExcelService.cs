@@ -50,19 +50,29 @@ namespace Attendence_System.Services
             }
 
             // Write Headers
+            var headerRow = worksheet.Row(1);
+            headerRow.Height = 25; // Taller header
+            
             for (int i = 0; i < headers.Count; i++)
             {
                 var cell = worksheet.Cell(1, i + 1);
                 cell.Value = headers[i];
                 cell.Style.Font.Bold = true;
-                cell.Style.Fill.BackgroundColor = XLColor.LightGray;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e293b"); // Slate 800
                 cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                cell.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1"); // Slate 300
             }
 
             // Write Data
             for (int r = 0; r < dataList.Count; r++)
             {
                 var item = dataList[r];
+                var row = worksheet.Row(r + 2);
+                row.Height = 20;
+
                 for (int c = 0; c < headers.Count; c++)
                 {
                     var cell = worksheet.Cell(r + 2, c + 1);
@@ -78,15 +88,36 @@ namespace Attendence_System.Services
                     }
                     else if (value.GetType().IsPrimitive || value is string || value is decimal)
                     {
-                        cell.Value = value.ToString();
+                        // Ensure numbers are treated as numbers in Excel for proper formatting/sorting if they are purely numeric types,
+                        // but ToString() was used before. Let's try to pass the value directly if it's numeric, otherwise string.
+                        if (value is double || value is float || value is decimal || value is int || value is long)
+                        {
+                            cell.Value = Convert.ToDouble(value);
+                        }
+                        else
+                        {
+                            cell.Value = value.ToString();
+                        }
                     }
                     else
                     {
-                        // Fallback for complex objects
                         cell.Value = value.ToString();
                     }
 
                     cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    cell.Style.Border.OutsideBorderColor = XLColor.FromHtml("#e2e8f0"); // Slate 200
+
+                    // Alternating row colors
+                    if (r % 2 == 0)
+                    {
+                        cell.Style.Fill.BackgroundColor = XLColor.White;
+                    }
+                    else
+                    {
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc"); // Slate 50
+                    }
                 }
             }
 

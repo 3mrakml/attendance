@@ -218,5 +218,60 @@ namespace Attendence_System.Services
 
             return percentages;
         }
+
+        public async Task<List<StudentReportItem>> GetComprehensiveReportAsync(int? gradeId)
+        {
+            var query = _context.Students
+                .Include(s => s.Grade)
+                .AsQueryable();
+
+            if (gradeId.HasValue)
+            {
+                query = query.Where(s => s.GradeId == gradeId.Value);
+            }
+
+            var students = await query.ToListAsync();
+
+            var lecturesPerGrade = await _context.LectureGrades
+                .GroupBy(lg => lg.GradeId)
+                .Select(g => new { GradeId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.GradeId, x => x.Count);
+
+            var studentIds = students.Select(s => s.StudentId).ToList();
+            var attendancePerStudent = await _context.StudentLectures
+                .Where(sl => studentIds.Contains(sl.StudentId))
+                .GroupBy(sl => sl.StudentId)
+                .Select(g => new { StudentId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.StudentId, x => x.Count);
+
+            var report = new List<StudentReportItem>();
+
+            foreach (var student in students)
+            {
+                int totalLectures = lecturesPerGrade.ContainsKey(student.GradeId) ? lecturesPerGrade[student.GradeId] : 0;
+                int attended = attendancePerStudent.ContainsKey(student.StudentId) ? attendancePerStudent[student.StudentId] : 0;
+                int absent = totalLectures - attended;
+                if (absent < 0) absent = 0; 
+
+                double percentage = totalLectures == 0 ? 0 : Math.Round(((double)attended / totalLectures) * 100, 1);
+
+                report.Add(new StudentReportItem
+                {
+                    StudentId = student.StudentId,
+                    FullName = student.FullName,
+                    PhoneNumber = student.PhoneNumber,
+                    QRToken = student.QRToken,
+                    GradeId = student.GradeId,
+                    GradeName = student.Grade?.Name ?? "غير محدد",
+                    TotalLectures = totalLectures,
+                    AttendedLectures = attended,
+                    AbsentLectures = absent,
+                    AttendancePercentage = percentage,
+                    CalculatedScore = 0 
+                });
+            }
+
+            return report.OrderBy(r => r.GradeName).ThenBy(r => r.FullName).ToList();
+        }
     }
 }

@@ -1,0 +1,224 @@
+@model Attendence_System.ViewModel.ComprehensiveReportViewModel
+@{
+    ViewData["Title"] = "التقرير الشامل";
+}
+
+<div class="space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-extrabold text-slate-800">التقرير الشامل للحضور</h2>
+            <p class="text-slate-500 mt-1">تتبع حضور وغياب الطلاب ودرجاتهم بشكل كامل.</p>
+        </div>
+        <div class="flex gap-3">
+            <button type="button" onclick="document.getElementById('settingsModal').classList.remove('hidden')" class="btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm">
+                <i data-lucide="settings" class="w-4 h-4 ml-2"></i> إعدادات الدرجات
+            </button>
+            <a id="exportExcelBtn" href="@Url.Action("ExportExcel", "Report", new { gradeId = Model.SelectedGradeId })" class="btn bg-slate-800 hover:bg-slate-900 text-white shadow-md">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4 ml-2"></i> تصدير Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+        <form method="get" asp-action="Index" class="flex gap-4 items-center">
+            <div class="flex-grow max-w-sm relative">
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <i data-lucide="filter" class="w-5 h-5 text-slate-400"></i>
+                </div>
+                <select name="gradeId" class="w-full pr-12 pl-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-slate-900 bg-white" onchange="this.form.submit()">
+                    <option value="">-- كل الصفوف --</option>
+                    @if (ViewBag.Grades != null)
+                    {
+                        foreach (var grade in ViewBag.Grades)
+                        {
+                            if (Model.SelectedGradeId == grade.GradeId)
+                            {
+                                <option value="@grade.GradeId" selected>@grade.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@grade.GradeId">@grade.Name</option>
+                            }
+                        }
+                    }
+                </select>
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i data-lucide="chevron-down" class="w-5 h-5 text-slate-400"></i>
+                </div>
+            </div>
+            @if(Model.SelectedGradeId.HasValue)
+            {
+                <a href="@Url.Action("Index", "Report")" class="text-sm font-bold text-rose-500 hover:text-rose-600 transition-colors">إلغاء الفلتر</a>
+            }
+        </form>
+    </div>
+
+    <!-- Data Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-100">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th onclick="sortTable(0, 'string')" class="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 transition-colors select-none group">
+                            اسم الطالب <i data-lucide="arrow-up-down" class="w-3 h-3 inline-block ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                        </th>
+                        <th onclick="sortTable(1, 'string')" class="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 transition-colors select-none group">
+                            الصف <i data-lucide="arrow-up-down" class="w-3 h-3 inline-block ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                        </th>
+                        <th onclick="sortTable(2, 'number')" class="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 transition-colors select-none group">
+                            إجمالي المحاضرات <i data-lucide="arrow-up-down" class="w-3 h-3 inline-block ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                        </th>
+                        <th onclick="sortTable(3, 'number')" class="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 transition-colors select-none group">
+                            الحضور <i data-lucide="arrow-up-down" class="w-3 h-3 inline-block ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                        </th>
+                        <th onclick="sortTable(4, 'number')" class="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 transition-colors select-none group">
+                            الغياب <i data-lucide="arrow-up-down" class="w-3 h-3 inline-block ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                        </th>
+                        <th onclick="sortTable(5, 'number')" class="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 transition-colors select-none group">
+                            النسبة % <i data-lucide="arrow-up-down" class="w-3 h-3 inline-block ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                        </th>
+                        <th onclick="sortTable(6, 'number')" class="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase cursor-pointer hover:bg-slate-100 transition-colors select-none group">
+                            الدرجة <i data-lucide="arrow-up-down" class="w-3 h-3 inline-block ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="reportTableBody" class="divide-y divide-slate-100">
+                    @if(Model.Students.Any())
+                    {
+                        @foreach(var student in Model.Students)
+                        {
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="font-bold text-slate-900">@student.FullName</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-600">
+                                    @student.GradeName
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-bold text-slate-500">
+                                    @student.TotalLectures
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-bold text-emerald-600">
+                                    @student.AttendedLectures
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-bold text-rose-500">
+                                    @student.AbsentLectures
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    @{
+                                        string badgeClass = student.AttendancePercentage >= 85 ? "bg-emerald-100 text-emerald-800" 
+                                                          : student.AttendancePercentage >= 50 ? "bg-amber-100 text-amber-800" 
+                                                          : "bg-rose-100 text-rose-800";
+                                    }
+                                    <span class="inline-flex px-3 py-1 rounded-full text-xs font-bold @badgeClass">
+                                        @student.AttendancePercentage.ToString("0.00")%
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    <span class="inline-flex items-center justify-center min-w-[3rem] px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm font-black border border-primary/20">
+                                        @student.CalculatedScore.ToString("0.00")
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="px-6 py-12 text-center text-slate-500 font-medium">
+                                لا يوجد بيانات لعرضها.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settingsModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="settingsModalLabel" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" aria-hidden="true" onclick="document.getElementById('settingsModal').classList.add('hidden')"></div>
+
+        <div class="relative bg-white rounded-2xl text-right overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full">
+            <div class="border-b border-slate-100 p-6 pb-4 flex justify-between items-center">
+                <h5 class="text-xl font-bold text-slate-800">إعدادات درجات الحضور</h5>
+                <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors" onclick="document.getElementById('settingsModal').classList.add('hidden')">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <form asp-action="UpdateMarks" asp-controller="Report" method="post">
+                @Html.AntiForgeryToken()
+                <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                    <p class="text-sm text-slate-500 mb-4">حدد الدرجة النهائية للحضور لكل صف. سيقوم النظام بحساب درجة كل طالب بناءً على نسبة حضوره من هذه الدرجة النهائية.</p>
+                    
+                    @foreach(var setting in Model.GradeSettings)
+                    {
+                        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <span class="font-bold text-slate-700">@setting.GradeName</span>
+                            <div class="w-32 relative">
+                                <input type="number" step="0.5" min="0" name="marks[@setting.GradeId]" value="@setting.MaxMarks" class="w-full pl-4 pr-10 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-center font-bold" required />
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 text-sm font-bold">
+                                    درجة
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="border-t border-slate-100 p-6 pt-4 flex gap-3">
+                    <button type="button" class="btn btn-neutral flex-1" onclick="document.getElementById('settingsModal').classList.add('hidden')">إلغاء</button>
+                    <button type="submit" class="btn btn-primary flex-1">
+                        <i data-lucide="save" class="w-4 h-4 ml-2"></i> حفظ الإعدادات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Track sorting direction for each column (true = asc, false = desc)
+        let sortDirections = [true, true, true, true, true, true, true];
+
+        function sortTable(columnIndex, type) {
+            const tbody = document.getElementById('reportTableBody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Skip sorting if there's no data
+            if(rows.length === 0 || (rows.length === 1 && rows[0].querySelector('td').colSpan === 7)) return;
+
+            const isAscending = sortDirections[columnIndex];
+            sortDirections[columnIndex] = !isAscending;
+
+            rows.sort((rowA, rowB) => {
+                let cellA = rowA.querySelectorAll('td')[columnIndex].innerText.trim();
+                let cellB = rowB.querySelectorAll('td')[columnIndex].innerText.trim();
+
+                if (type === 'number') {
+                    // Remove % if it exists
+                    cellA = parseFloat(cellA.replace(/[%]/g, '')) || 0;
+                    cellB = parseFloat(cellB.replace(/[%]/g, '')) || 0;
+                    return isAscending ? cellA - cellB : cellB - cellA;
+                } else {
+                    return isAscending ? cellA.localeCompare(cellB, 'ar') : cellB.localeCompare(cellA, 'ar');
+                }
+            });
+
+            // Re-append rows
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+
+            // Update Export Excel link
+            const exportBtn = document.getElementById('exportExcelBtn');
+            if (exportBtn) {
+                const url = new URL(exportBtn.href, window.location.origin);
+                url.searchParams.set('sortCol', columnIndex);
+                url.searchParams.set('sortAsc', isAscending);
+                exportBtn.href = url.pathname + url.search;
+            }
+        }
+    </script>
+}
