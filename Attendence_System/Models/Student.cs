@@ -10,6 +10,9 @@ namespace Attendence_System.Models
         public string QRToken { get; set; }         // رمز QR الفريد (auto-generated)
         public int Age { get; set; }                // السن
 
+        [MaxLength(20)]
+        public string? PhoneNumber { get; set; }    // رقم هاتف الطالب
+
         public ICollection<StudentLecture>? StudentLectures { get; set; }
 
         public int GradeId { get; set; }

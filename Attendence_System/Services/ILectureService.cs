@@ -8,7 +8,7 @@ namespace Attendence_System.Services
     {
         Task<List<Lecture>> GetLecturesByCourseAsync(int courseId);
         Task<Lecture> GetLectureByIdAsync(int id);
-        Task<Lecture> CreateLectureAsync(Lecture lecture);
+        Task<Lecture> CreateLectureAsync(Lecture lecture, List<int> gradeIds);
         Task<bool> CloseAttendanceAsync(int lectureId);
         Task<bool> DeleteLectureAsync(int lectureId);
         Task<List<Student>> GetStudentsInLectureAsync(int lectureId);

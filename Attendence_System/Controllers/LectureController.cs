@@ -62,12 +62,25 @@ namespace Attendence_System.Controllers
         {
             var userId = _userManager.GetUserId(User);
 
-            if (model.GradeId > 0 && model.CourseId > 0)
+            // التحقق من اختيار صف واحد على الأقل
+            if (model.GradeIds == null || !model.GradeIds.Any())
             {
-                var isAssigned = await _courseService.IsCourseAssignedToGradeAsync(model.CourseId, model.GradeId);
-                if (!isAssigned)
+                ModelState.AddModelError("GradeIds", "يجب اختيار صف دراسي واحد على الأقل.");
+            }
+
+            // التحقق من أن المادة مسجلة في جميع الصفوف المختارة
+            if (model.CourseId > 0 && model.GradeIds != null && model.GradeIds.Any())
+            {
+                foreach (var gradeId in model.GradeIds)
                 {
-                    ModelState.AddModelError("CourseId", "هذه المادة غير مسجلة في الصف المختار.");
+                    var isAssigned = await _courseService.IsCourseAssignedToGradeAsync(model.CourseId, gradeId);
+                    if (!isAssigned)
+                    {
+                        var grades = await _gradeService.GetAllGradesAsync();
+                        var gradeName = grades.FirstOrDefault(g => g.GradeId == gradeId)?.Name ?? gradeId.ToString();
+                        ModelState.AddModelError("GradeIds", $"المادة غير مسجلة في الصف: {gradeName}.");
+                        break;
+                    }
                 }
             }
 
@@ -92,11 +105,10 @@ namespace Attendence_System.Controllers
             {
                 Title = model.Title,
                 CourseId = model.CourseId,
-                GradeId = model.GradeId,
                 DateTime = System.DateTime.Now
             };
 
-            lecture = await _lectureService.CreateLectureAsync(lecture);
+            lecture = await _lectureService.CreateLectureAsync(lecture, model.GradeIds);
 
             // Redirect directly to the scanner for attendance instead of showing lecture details
             return RedirectToAction("Scan", new { id = lecture.LectureId });
@@ -110,10 +122,23 @@ namespace Attendence_System.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetCoursesByGrade(int gradeId)
+        public async Task<IActionResult> GetCoursesByGrades([FromQuery] List<int> gradeIds)
         {
             var userId = _userManager.GetUserId(User);
-            var courses = await _courseService.GetCoursesByGradeAndUserAsync(gradeId, userId);
+            if (gradeIds == null || !gradeIds.Any())
+                return Json(new List<object>());
+
+            // نبدأ بمواد أول صف
+            var courses = await _courseService.GetCoursesByGradeAndUserAsync(gradeIds[0], userId);
+
+            // نقوم بعمل تقاطع (Intersection) لضمان أن المادة موجودة في جميع الصفوف المختارة
+            for (int i = 1; i < gradeIds.Count; i++)
+            {
+                var nextGradeCourses = await _courseService.GetCoursesByGradeAndUserAsync(gradeIds[i], userId);
+                var nextGradeCourseIds = nextGradeCourses.Select(c => c.CourseId).ToHashSet();
+                courses = courses.Where(c => nextGradeCourseIds.Contains(c.CourseId)).ToList();
+            }
+
             var courseList = courses.Select(c => new { value = c.CourseId, text = c.Name }).ToList();
             return Json(courseList);
         }
@@ -131,20 +156,19 @@ namespace Attendence_System.Controllers
             if (lecture.Course.UserId != userId)
                 return Forbid();
 
-            // We need to fetch all students in this grade, and their attendance status.
-            var allStudentsInGrade = await _studentService.GetAllStudentsAsync();
-            allStudentsInGrade = allStudentsInGrade.Where(s => s.GradeId == lecture.GradeId).ToList();
+            // جلب كل طلاب الصفوف المرتبطة بهذه المحاضرة
+            var lectureGradeIds = lecture.LectureGrades.Select(lg => lg.GradeId).ToHashSet();
+            var allStudents = await _studentService.GetAllStudentsAsync();
+            var allStudentsInGrades = allStudents.Where(s => lectureGradeIds.Contains(s.GradeId)).ToList();
 
-            var attendedStudentsData = await _lectureService.GetStudentsInLectureAsync(id); // This returns List<Student> but we need the AttendedAt date ideally.
-            // Since we need AttendedAt, and GetStudentsInLectureAsync only returns Student, we will just use the basic boolean for now, or fetch from DbContext.
-            // Actually, we can fetch from the controller using the StudentService if we had a method, but for simplicity:
+            var attendedStudentsData = await _lectureService.GetStudentsInLectureAsync(id);
             var attendedStudentIds = attendedStudentsData.Select(s => s.StudentId).ToHashSet();
 
-            var studentsStatus = allStudentsInGrade.Select(s => new StudentAttendanceStatus
+            var studentsStatus = allStudentsInGrades.Select(s => new StudentAttendanceStatus
             {
                 Student = s,
                 IsAttended = attendedStudentIds.Contains(s.StudentId),
-                AttendedAt = attendedStudentIds.Contains(s.StudentId) ? System.DateTime.Now : null // Fallback date if not available
+                AttendedAt = attendedStudentIds.Contains(s.StudentId) ? System.DateTime.Now : null
             })
             .OrderByDescending(s => s.IsAttended)
             .ThenBy(s => s.Student.FullName)
@@ -172,13 +196,14 @@ namespace Attendence_System.Controllers
             var userId = _userManager.GetUserId(User);
             if (lecture.Course.UserId != userId) return Forbid();
 
-            var allStudentsInGrade = await _studentService.GetAllStudentsAsync();
-            allStudentsInGrade = allStudentsInGrade.Where(s => s.GradeId == lecture.GradeId).ToList();
+            var lectureGradeIds = lecture.LectureGrades.Select(lg => lg.GradeId).ToHashSet();
+            var allStudents = await _studentService.GetAllStudentsAsync();
+            var allStudentsInGrades = allStudents.Where(s => lectureGradeIds.Contains(s.GradeId)).ToList();
 
             var attendedStudentsData = await _lectureService.GetStudentsInLectureAsync(id);
             var attendedStudentIds = attendedStudentsData.Select(s => s.StudentId).ToHashSet();
 
-            var studentsStatus = allStudentsInGrade.Select(s => new StudentAttendanceStatus
+            var studentsStatus = allStudentsInGrades.Select(s => new StudentAttendanceStatus
             {
                 Student = s,
                 IsAttended = attendedStudentIds.Contains(s.StudentId),
@@ -188,10 +213,10 @@ namespace Attendence_System.Controllers
             .ThenBy(s => s.Student.FullName)
             .ToList();
 
-            // Define custom columns
             var columns = new Dictionary<string, Func<StudentAttendanceStatus, object>>
             {
                 { "الاسم بالكامل", s => s.Student.FullName },
+                { "الصف", s => s.Student.Grade?.Name ?? "-" },
                 { "الحالة", s => s.IsAttended ? "حضر" : "غائب" },
                 { "وقت الحضور", s => s.IsAttended && s.AttendedAt.HasValue ? s.AttendedAt.Value.ToString("yyyy-MM-dd HH:mm tt") : "-" }
             };

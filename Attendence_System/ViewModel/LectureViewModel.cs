@@ -6,11 +6,13 @@ namespace Attendence_System.ViewModel
     {
         public int LectureId { get; set; }
         public string Title { get; set; }
-        public string ?QRCode { get; set; }
-        public int CourseId { get; set; } // لإضافة الكورس
-        public IEnumerable<SelectListItem> ? Courses { get; set; } // قائمة الكورسات
+        public string? QRCode { get; set; }
 
-        public int GradeId { get; set; } // الصف
-        public IEnumerable<SelectListItem> ? Grades { get; set; } // قائمة الصفوف
+        public int CourseId { get; set; }
+        public IEnumerable<SelectListItem>? Courses { get; set; }
+
+        // Many-to-Many: محاضرة لأكثر من صف/مستوى
+        public List<int> GradeIds { get; set; } = new List<int>();
+        public IEnumerable<SelectListItem>? Grades { get; set; }
     }
 }

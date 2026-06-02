@@ -22,7 +22,8 @@ namespace Attendence_System.Services
         {
             return await _context.Lectures
                 .AsNoTracking()
-                .Include(l => l.Grade)
+                .Include(l => l.LectureGrades)
+                    .ThenInclude(lg => lg.Grade)
                 .Where(l => l.CourseId == courseId)
                 .ToListAsync();
         }
@@ -31,12 +32,25 @@ namespace Attendence_System.Services
         {
             return await _context.Lectures
                 .Include(l => l.Course)
+                .Include(l => l.LectureGrades)
+                    .ThenInclude(lg => lg.Grade)
                 .FirstOrDefaultAsync(l => l.LectureId == id);
         }
 
-        public async Task<Lecture> CreateLectureAsync(Lecture lecture)
+        public async Task<Lecture> CreateLectureAsync(Lecture lecture, List<int> gradeIds)
         {
             _context.Lectures.Add(lecture);
+            await _context.SaveChangesAsync();
+
+            // ربط المحاضرة بكل الصفوف المختارة
+            foreach (var gradeId in gradeIds)
+            {
+                _context.LectureGrades.Add(new LectureGrade
+                {
+                    LectureId = lecture.LectureId,
+                    GradeId = gradeId
+                });
+            }
             await _context.SaveChangesAsync();
 
             // Generate QR code with the newly generated ID

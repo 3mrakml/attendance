@@ -35,6 +35,12 @@ namespace Attendence_System.Services
             return await _context.Students.FirstOrDefaultAsync(s => s.QRToken == qrToken);
         }
 
+        public async Task<Student> GetStudentByPhoneNumberAsync(string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber)) return null;
+            return await _context.Students.FirstOrDefaultAsync(s => s.PhoneNumber == phoneNumber);
+        }
+
         public async Task<bool> StudentExistsAsync(string qrToken)
         {
             return await _context.Students.AnyAsync(s => s.QRToken == qrToken);
@@ -56,6 +62,7 @@ namespace Attendence_System.Services
             existingStudent.FullName = student.FullName;
             existingStudent.Age = student.Age;
             existingStudent.GradeId = student.GradeId;
+            existingStudent.PhoneNumber = student.PhoneNumber;
 
             await _context.SaveChangesAsync();
             return true;
@@ -73,7 +80,10 @@ namespace Attendence_System.Services
 
         public async Task<(bool Success, string Message)> RegisterAttendanceAsync(ScanRequestVM request)
         {
-            var lecture = await _context.Lectures.FindAsync(request.LectureId);
+            var lecture = await _context.Lectures
+                .Include(l => l.LectureGrades)
+                .FirstOrDefaultAsync(l => l.LectureId == request.LectureId);
+
             if (lecture == null)
                 return (false, "Lecture not found.");
 
@@ -84,9 +94,10 @@ namespace Attendence_System.Services
             if (student == null)
                 return (false, $"Student with QR Token {request.IdCollege} not found.");
 
-            // التحقق من أن الطالب ينتمي للصف المخصص للمحاضرة (Grade validation)
-            if (student.GradeId != lecture.GradeId)
-                return (false, $"الطالب ({student.FullName}) غير مسجل في الصف المخصص لهذه المحاضرة.");
+            // التحقق من أن الطالب ينتمي لأحد الصفوف المخصصة للمحاضرة
+            var lectureGradeIds = lecture.LectureGrades.Select(lg => lg.GradeId).ToHashSet();
+            if (!lectureGradeIds.Contains(student.GradeId))
+                return (false, $"الطالب ({student.FullName}) غير مسجل في أي من الصفوف المخصصة لهذه المحاضرة.");
 
             bool isAlreadyRegistered = await _context.StudentLectures
                 .AnyAsync(sl => sl.StudentId == student.StudentId && sl.LectureId == lecture.LectureId);
@@ -137,14 +148,16 @@ namespace Attendence_System.Services
 
             if (student == null) return null;
 
-            // Get all lectures assigned to this student's grade
-            var gradeLectures = await _context.Lectures
-                .Include(l => l.Course)
-                .Where(l => l.GradeId == student.GradeId)
+            // جلب كل المحاضرات المرتبطة بصف الطالب عبر LectureGrades
+            var gradeLectures = await _context.LectureGrades
+                .Where(lg => lg.GradeId == student.GradeId)
+                .Include(lg => lg.Lecture)
+                    .ThenInclude(l => l.Course)
+                .Select(lg => lg.Lecture)
                 .OrderByDescending(l => l.DateTime)
                 .ToListAsync();
 
-            // Get the student's attendance records
+            // جلب سجلات حضور الطالب
             var studentAttendances = await _context.StudentLectures
                 .Where(sl => sl.StudentId == studentId)
                 .ToDictionaryAsync(sl => sl.LectureId, sl => sl);
@@ -171,30 +184,30 @@ namespace Attendence_System.Services
         }
         public async Task<Dictionary<int, double>> GetStudentsAttendancePercentagesAsync()
         {
-            // 1. Get total lectures per grade
-            var lecturesPerGrade = await _context.Lectures
-                .GroupBy(l => l.GradeId)
+            // 1. عدد المحاضرات المتاحة لكل صف عبر LectureGrades
+            var lecturesPerGrade = await _context.LectureGrades
+                .GroupBy(lg => lg.GradeId)
                 .Select(g => new { GradeId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.GradeId, x => x.Count);
 
-            // 2. Get total attended lectures per student
+            // 2. عدد المحاضرات التي حضرها كل طالب
             var attendancePerStudent = await _context.StudentLectures
                 .GroupBy(sl => sl.StudentId)
                 .Select(g => new { StudentId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.StudentId, x => x.Count);
 
-            // 3. Get students and their grades
+            // 3. الطلاب وصفوفهم
             var students = await _context.Students
                 .Select(s => new { s.StudentId, s.GradeId })
                 .ToListAsync();
 
             var percentages = new Dictionary<int, double>();
-            foreach(var s in students)
+            foreach (var s in students)
             {
-                int totalLectures = lecturesPerGrade.ContainsKey(s.GradeId) 
+                int totalLectures = lecturesPerGrade.ContainsKey(s.GradeId)
                     ? lecturesPerGrade[s.GradeId] : 0;
-                
-                int attended = attendancePerStudent.ContainsKey(s.StudentId) 
+
+                int attended = attendancePerStudent.ContainsKey(s.StudentId)
                     ? attendancePerStudent[s.StudentId] : 0;
 
                 if (totalLectures == 0)

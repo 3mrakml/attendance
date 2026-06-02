@@ -11,8 +11,8 @@ namespace Attendence_System.Models
         public int CourseId { get; set; }
         public Course Course { get; set; }
 
-        public int GradeId { get; set; }             // الصف الدراسي المخصص (NOT NULL)
-        public Grade Grade { get; set; }
+        // علاقة Many-to-Many مع الصفوف الدراسية (محاضرة لأكثر من مستوى)
+        public ICollection<LectureGrade> LectureGrades { get; set; } = new List<LectureGrade>();
 
         public ICollection<StudentLecture> StudentLectures { get; set; }
     }

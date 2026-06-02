@@ -1,0 +1,166 @@
+@model Attendence_System.Models.Student
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>تم التسجيل بنجاح - بطاقة الطالب</title>
+    <!-- Use Tailwind via CDN for standalone printing -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                    },
+                    colors: {
+                        card: {
+                            bg: '#e9eef8',
+                            dark: '#34415b',
+                            light: '#c9d5f0'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+    </style>
+    <!-- html-to-image for better RTL/Arabic support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-8">
+
+    <div class="mb-8 text-center max-w-2xl bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+        <div class="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto text-2xl shadow-sm border border-emerald-100 mb-4">
+            <i data-lucide="check" class="w-8 h-8"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-800 mb-2">مرحباً بك يا @Model.FullName</h3>
+        
+        @if (!string.IsNullOrEmpty(ViewBag.SuccessMessage))
+        {
+            <p class="text-gray-600 font-medium bg-gray-50 p-4 rounded-xl">@ViewBag.SuccessMessage</p>
+        }
+    </div>
+
+    <!-- Control buttons -->
+    <div class="flex gap-4 mb-8">
+        <button onclick="downloadAsImage()" class="bg-card-dark hover:bg-opacity-90 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-colors flex items-center gap-2">
+            <i data-lucide="download" class="w-5 h-5"></i> تحميل الكارنيه
+        </button>
+        <a href="@Url.Action("Register")" class="bg-white text-gray-700 font-bold py-3 px-8 rounded-xl shadow-sm border border-gray-200 transition-colors flex items-center gap-2 hover:bg-gray-50">
+            <i data-lucide="arrow-right" class="w-5 h-5"></i> العودة للتسجيل
+        </a>
+    </div>
+
+    <script>
+        function downloadAsImage() {
+            const card = document.querySelector('.card-container');
+            
+            // Using html-to-image instead of html2canvas to fix Arabic text (RTL) rendering issues
+            htmlToImage.toPng(card, { 
+                pixelRatio: 2, 
+                backgroundColor: '#e9eef8' 
+            })
+            .then(function (dataUrl) {
+                const link = document.createElement('a');
+                link.download = '@Html.Raw(Model.FullName.Replace(" ", "_"))_@(Model.QRToken).png';
+                link.href = dataUrl;
+                link.click();
+
+                // If WhatsApp Link exists, redirect after short delay
+                @if (!string.IsNullOrEmpty(ViewBag.WhatsAppGroupLink))
+                {
+                    <text>
+                    setTimeout(() => {
+                        window.location.href = '@Html.Raw(ViewBag.WhatsAppGroupLink)';
+                    }, 1500);
+                    </text>
+                }
+            })
+            .catch(function (error) {
+                console.error('Oops, something went wrong!', error);
+                alert("حدث خطأ أثناء استخراج الصورة.");
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+
+            @if (!string.IsNullOrEmpty(ViewBag.WhatsAppGroupLink))
+            {
+                <text>
+                // Auto trigger process
+                const dlBtn = document.querySelector('button[onclick="downloadAsImage()"]');
+                if (dlBtn) {
+                    dlBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري التحميل والتحويل للواتس...';
+                }
+                
+                // Small delay to ensure fonts and icons have rendered
+                setTimeout(() => {
+                    downloadAsImage();
+                }, 1000);
+                </text>
+            }
+        });
+    </script>
+
+    <!-- Card Layout (Landscape 600x350) EXACTLY matching the original -->
+    <div class="card-container relative w-[600px] h-[350px] bg-card-bg overflow-hidden shadow-2xl rounded-sm flex items-center shrink-0">
+        
+        <!-- Top Right Decor (since RTL) -->
+        <div class="absolute top-0 right-0 w-24 h-24 bg-card-light rounded-bl-full opacity-80"></div>
+        <!-- Circle rings top right -->
+        <div class="absolute -top-16 -right-16 w-48 h-48 border-[6px] border-card-dark rounded-full opacity-30"></div>
+        <div class="absolute -top-8 -right-8 w-32 h-32 border-[3px] border-card-dark rounded-full opacity-50"></div>
+        <!-- Dark accent top right -->
+        <div class="absolute top-12 -right-8 w-16 h-24 bg-card-dark rounded-full"></div>
+
+        <!-- Bottom Left Decor (since RTL) -->
+        <div class="absolute bottom-0 left-0 w-32 h-32 bg-card-light rounded-tr-full opacity-90"></div>
+        <div class="absolute bottom-0 left-0 w-20 h-20 bg-card-dark rounded-tr-full"></div>
+        <!-- Circle rings bottom left -->
+        <div class="absolute -bottom-20 -left-20 w-64 h-64 border-[4px] border-card-dark rounded-full opacity-80"></div>
+        <div class="absolute -bottom-10 -left-10 w-44 h-44 border-[2px] border-card-dark rounded-full opacity-60"></div>
+        <div class="absolute -bottom-4 -left-4 w-28 h-28 border-[2px] border-card-dark rounded-full opacity-40"></div>
+
+        <!-- Content -->
+        <div class="relative z-10 w-full px-12 flex flex-row items-center justify-between">
+            
+            <!-- Student Details -->
+            <div class="flex-1 text-right pl-8">
+                <h1 class="text-4xl font-extrabold text-card-dark tracking-tight mb-4" style="font-family: 'Arial', sans-serif;">@Model.FullName</h1>
+                
+                <div class="w-full h-[2px] bg-card-dark opacity-30 mb-6"></div>
+                
+                <div class="space-y-4 text-card-dark font-medium text-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-full bg-card-dark text-white flex items-center justify-center text-sm shadow-md"><i data-lucide="scan-barcode" class="w-3.5 h-3.5"></i></div>
+                        <span class="text-base">الرقم التعريفي: <span class="font-bold font-mono tracking-widest bg-white/50 px-2 py-0.5 rounded ml-1">@Model.QRToken</span></span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-full bg-card-dark text-white flex items-center justify-center text-sm shadow-md"><i data-lucide="calendar" class="w-3.5 h-3.5"></i></div>
+                        <span class="text-base">السن: <span class="font-bold font-mono text-lg ml-1">@Model.Age</span></span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-full bg-card-dark text-white flex items-center justify-center text-sm shadow-md"><i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i></div>
+                        <span class="text-base">الصف: <span class="font-bold ml-1">@(Model.Grade?.Name ?? "غير محدد")</span></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- QR Code on the Left -->
+            <div class="bg-white p-4 rounded-2xl shadow-xl border-4 border-white transform rotate-2 hover:rotate-0 transition-transform">
+                <img src="@ViewBag.QRCode" class="w-40 h-40 object-contain mix-blend-multiply" alt="QR Code" />
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

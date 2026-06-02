@@ -138,18 +138,48 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    successBeep.play().catch(() => {});
+                    successBeep.play().catch(e => console.log('Audio play blocked:', e));
                     scanCount++;
                     scanCountEl.innerText = `${scanCount} تم مسحه`;
                     addLog(data.message, true);
+
+                    Swal.fire({
+                        toast: true,
+                        position: 'top',
+                        icon: 'success',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true
+                    });
                 } else {
-                    errorBeep.play().catch(() => {});
+                    errorBeep.play().catch(e => console.log('Audio play blocked:', e));
                     addLog(data.message, false);
+
+                    Swal.fire({
+                        toast: true,
+                        position: 'top',
+                        icon: 'error',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2500,
+                        timerProgressBar: true
+                    });
                 }
             })
             .catch(() => {
-                errorBeep.play().catch(() => {});
-                addLog('حدث خطأ في الاتصال بالخادم.', false);
+                errorBeep.play().catch(e => console.log('Audio play blocked:', e));
+                const errMsg = 'حدث خطأ في الاتصال بالخادم.';
+                addLog(errMsg, false);
+                Swal.fire({
+                    toast: true,
+                    position: 'top',
+                    icon: 'error',
+                    title: errMsg,
+                    showConfirmButton: false,
+                    timer: 2500,
+                    timerProgressBar: true
+                });
             })
             .finally(() => {
                 setTimeout(() => {

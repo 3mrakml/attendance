@@ -1,0 +1,80 @@
+@{
+    ViewData["Title"] = "إعدادات فورم التسجيل";
+}
+
+<div class="max-w-3xl mx-auto space-y-8">
+    <div class="text-center">
+        <h2 class="text-3xl font-extrabold text-slate-800">إدارة نماذج التسجيل</h2>
+        <p class="text-slate-500 mt-2">تحكم في فورم تسجيل الطلاب الذاتي ورسائل الترحيب.</p>
+    </div>
+
+
+
+    <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+        <form asp-action="UpdateSettings" method="post" class="space-y-6">
+            @Html.AntiForgeryToken()
+
+            <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">حالة الفورم العام</h3>
+                        <p class="text-sm text-slate-500 mt-1">إذا تم إيقاف التسجيل، فلن يتمكن أي طالب من إدخال بياناته حتى لو كان يمتلك الرابط.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="isRegistrationOpen" value="true" class="sr-only peer" @(ViewBag.IsRegistrationOpen ? "checked" : "")>
+                        <div class="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-7 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">رسالة النجاح للطالب</label>
+                <p class="text-xs text-slate-500 mb-2">النص الذي سيظهر للطالب أسفل الباركود الخاص به بعد التسجيل بنجاح.</p>
+                <textarea name="registrationSuccessMessage" rows="4" class="w-full p-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900" placeholder="مثال: تم تسجيلك بنجاح! احتفظ بهذه الصورة...">@ViewBag.RegistrationSuccessMessage</textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">رابط جروب الواتس آب (اختياري)</label>
+                <p class="text-xs text-slate-500 mb-2">إذا قمت بإضافة رابط هنا، سيتم تحميل كارنيه الطالب تلقائياً ثم تحويله إلى هذا الرابط.</p>
+                <div class="relative">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <i data-lucide="link" class="w-5 h-5 text-slate-400"></i>
+                    </div>
+                    <input type="url" name="whatsappGroupLink" value="@ViewBag.WhatsAppGroupLink" class="w-full pl-4 pr-12 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900" placeholder="https://chat.whatsapp.com/..." dir="ltr" />
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100">
+                <button type="submit" class="w-full btn btn-primary flex items-center justify-center gap-2">
+                    <i data-lucide="save" class="w-5 h-5"></i> حفظ الإعدادات
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="bg-blue-50/50 p-6 rounded-2xl border border-blue-100">
+        <h3 class="font-bold text-blue-900 mb-2 flex items-center gap-2">
+            <i data-lucide="link" class="w-5 h-5 text-blue-500"></i>
+            رابط التسجيل للطلاب
+        </h3>
+        <div class="flex items-center gap-3">
+            <input type="text" readonly value="@Url.Action("Register", "Public", null, Context.Request.Scheme)" class="flex-grow p-3 rounded-xl border border-blue-200 bg-white text-slate-600 font-mono text-sm" id="publicLink" />
+            <button type="button" onclick="copyLink()" class="btn bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 whitespace-nowrap">
+                <i data-lucide="copy" class="w-4 h-4 inline-block ml-1"></i> نسخ الرابط
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function copyLink() {
+            var copyText = document.getElementById("publicLink");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); 
+            navigator.clipboard.writeText(copyText.value).then(() => {
+                alert("تم نسخ الرابط بنجاح!");
+            });
+        }
+    </script>
+}

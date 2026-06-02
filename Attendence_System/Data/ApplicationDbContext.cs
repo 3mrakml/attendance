@@ -19,6 +19,8 @@ namespace Attendence_System.Data
         public DbSet<StudentLecture> StudentLectures { get; set; }
         public DbSet<Grade> Grades { get; set; }
         public DbSet<CourseGrade> CourseGrades { get; set; }
+        public DbSet<LectureGrade> LectureGrades { get; set; }
+        public DbSet<SystemSetting> SystemSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -59,11 +61,20 @@ namespace Attendence_System.Data
                 .HasForeignKey(l => l.CourseId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ربط المحاضرة بالصف
-            modelBuilder.Entity<Lecture>()
-                .HasOne(l => l.Grade)
-                .WithMany(g => g.Lectures)
-                .HasForeignKey(l => l.GradeId)
+            // ربط المحاضرة بالصفوف (Many-to-Many عبر LectureGrade)
+            modelBuilder.Entity<LectureGrade>()
+                .HasKey(lg => new { lg.LectureId, lg.GradeId });
+
+            modelBuilder.Entity<LectureGrade>()
+                .HasOne(lg => lg.Lecture)
+                .WithMany(l => l.LectureGrades)
+                .HasForeignKey(lg => lg.LectureId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<LectureGrade>()
+                .HasOne(lg => lg.Grade)
+                .WithMany(g => g.LectureGrades)
+                .HasForeignKey(lg => lg.GradeId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // جدول الحضور - Composite PK (StudentId + LectureId) فقط (2NF)

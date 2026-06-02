@@ -11,6 +11,7 @@ namespace Attendence_System.Services
         Task<List<Student>> GetAllStudentsAsync();
         Task<Student> GetStudentByIdAsync(int id);
         Task<Student> GetStudentByIdCollegeAsync(string idCollege);
+        Task<Student> GetStudentByPhoneNumberAsync(string phoneNumber);
         Task<bool> StudentExistsAsync(string idCollege);
         Task<Student> CreateStudentAsync(Student student);
         Task<bool> UpdateStudentAsync(Student student);

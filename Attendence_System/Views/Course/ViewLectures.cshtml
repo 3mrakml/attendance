@@ -36,7 +36,11 @@
             <select id="gradeFilter" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-slate-900 transition-all">
                 <option value="all">كل الصفوف</option>
                 @{
-                    var uniqueGrades = Model.Lectures?.Where(l => l.Grade != null).Select(l => l.Grade.Name).Distinct() ?? new List<string>();
+                    var uniqueGrades = Model.Lectures
+                        ?.SelectMany(l => l.LectureGrades)
+                        .Select(lg => lg.Grade?.Name)
+                        .Where(n => n != null)
+                        .Distinct() ?? new List<string>();
                     foreach (var gradeName in uniqueGrades)
                     {
                         <option value="@gradeName">@gradeName</option>
@@ -52,7 +56,9 @@
         {
             @foreach (var lecture in Model.Lectures)
             {
-                <div class="lecture-card bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 group flex flex-col h-full relative overflow-hidden js-delete-parent" data-title="@lecture.Title" data-grade="@(lecture.Grade?.Name ?? "")">
+                <div class="lecture-card bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 group flex flex-col h-full relative overflow-hidden js-delete-parent"
+                     data-title="@lecture.Title"
+                     data-grade="@string.Join(",", lecture.LectureGrades?.Select(lg => lg.Grade?.Name ?? "") ?? new List<string>())">
                     <div class="flex items-start justify-between mb-4 relative z-10">
                         <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xl shadow-sm">
                             <i data-lucide="monitor-play" class="w-5 h-5"></i>
@@ -63,12 +69,15 @@
                     </div>
                     
                     <h3 class="text-xl font-bold text-slate-800 mb-2">@lecture.Title</h3>
-                    @if (lecture.Grade != null)
+                    @if (lecture.LectureGrades != null && lecture.LectureGrades.Any())
                     {
-                        <div class="mb-3">
-                            <span class="inline-block px-3 py-1 bg-amber-50 text-amber-600 text-xs font-bold rounded-lg border border-amber-100">
-                                <i class="bi bi-mortarboard ml-1"></i> @lecture.Grade.Name
-                            </span>
+                        <div class="mb-3 flex flex-wrap gap-1">
+                            @foreach (var lg in lecture.LectureGrades)
+                            {
+                                <span class="inline-block px-3 py-1 bg-amber-50 text-amber-600 text-xs font-bold rounded-lg border border-amber-100">
+                                    <i class="bi bi-mortarboard ml-1"></i> @(lg.Grade?.Name ?? "")
+                                </span>
+                            }
                         </div>
                     }
                     
@@ -121,8 +130,10 @@
                     const grade = card.getAttribute('data-grade');
                     
                     const matchesSearch = title.includes(searchTerm);
-                    const matchesGrade = selectedGrade === 'all' || grade === selectedGrade;
-                    
+                    // grade data attribute يمكن أن يحتوي على أكثر من صف مفصولة بفاصلة
+                    const grades = card.getAttribute('data-grade').split(',');
+                    const matchesGrade = selectedGrade === 'all' || grades.includes(selectedGrade);
+
                     if (matchesSearch && matchesGrade) {
                         card.style.display = '';
                     } else {

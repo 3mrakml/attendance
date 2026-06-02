@@ -14,6 +14,7 @@
         <form asp-action="Create" method="post" class="space-y-6">
             @Html.AntiForgeryToken()
             
+            @* اسم المحاضرة *@
             <div>
                 <label asp-for="Title" class="block text-sm font-semibold text-slate-700 mb-2">اسم المحاضرة</label>
                 <div class="relative">
@@ -25,22 +26,44 @@
                 <span asp-validation-for="Title" class="text-rose-500 text-sm mt-1 block font-medium"></span>
             </div>
 
+            @* اختيار الصفوف (Multi-select Checkboxes) *@
             <div>
-                <label asp-for="GradeId" class="block text-sm font-semibold text-slate-700 mb-2">اختر الصف / الفرقة</label>
-                <div class="relative">
-                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+                <label class="block text-sm font-semibold text-slate-700 mb-3">
+                    <i data-lucide="users" class="w-4 h-4 inline-block ml-1 text-slate-400"></i>
+                    اختر الصفوف / المستويات
+                    <span class="text-xs text-slate-400 font-normal mr-2">(يمكن اختيار أكثر من صف)</span>
+                </label>
+
+                @if (Model.Grades != null && Model.Grades.Any())
+                {
+                    <div class="grid grid-cols-2 gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+                        @foreach (var grade in Model.Grades)
+                        {
+                            <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-primary hover:bg-primary/10 transition-all group has-[:checked]:border-primary has-[:checked]:bg-primary/10">
+                                <div class="relative flex items-center justify-center flex-shrink-0">
+                                    <input type="checkbox"
+                                           name="GradeIds"
+                                           value="@grade.Value"
+                                           class="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded-md checked:bg-primary checked:border-primary transition-all cursor-pointer"
+                                           @(Model.GradeIds != null && Model.GradeIds.Contains(int.Parse(grade.Value)) ? "checked" : "") />
+                                    <i data-lucide="check" class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></i>
+                                </div>
+                                <span class="text-sm font-semibold text-slate-700 group-hover:text-primary transition-colors">@grade.Text</span>
+                            </label>
+                        }
                     </div>
-                    <select class="w-full pr-10 pl-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 appearance-none bg-white" asp-for="GradeId" asp-items="Model.Grades" required>
-                        <option value="">-- اختر الصف --</option>
-                    </select>
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
-                    </div>
-                </div>
-                <span asp-validation-for="GradeId" class="text-rose-500 text-sm mt-1 block font-medium"></span>
+                }
+
+                @if (!ViewData.ModelState.IsValid && ViewData.ModelState["GradeIds"] != null)
+                {
+                    foreach (var error in ViewData.ModelState["GradeIds"].Errors)
+                    {
+                        <p class="text-rose-500 text-sm mt-1 font-medium">@error.ErrorMessage</p>
+                    }
+                }
             </div>
 
+            @* اختيار المادة *@
             <div>
                 <label asp-for="CourseId" class="block text-sm font-semibold text-slate-700 mb-2">اختر المادة</label>
                 <div class="relative">
@@ -55,6 +78,7 @@
                     </div>
                 </div>
                 <span asp-validation-for="CourseId" class="text-rose-500 text-sm mt-1 block font-medium"></span>
+                <p id="courseHelp" class="text-xs text-slate-400 mt-1 hidden">اختر صفاً واحداً على الأقل لتحميل المواد المتاحة.</p>
             </div>
 
             <button type="submit" class="w-full btn btn-primary flex items-center justify-center gap-2">
@@ -68,27 +92,59 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            var gradeSelect = document.getElementById('GradeId');
             var courseSelect = document.getElementById('CourseId');
+            var courseHelp = document.getElementById('courseHelp');
+            var checkboxes = document.querySelectorAll('input[name="GradeIds"]');
 
-            gradeSelect.addEventListener('change', function () {
-                var gradeId = this.value;
-                courseSelect.innerHTML = '<option value="">-- اختر المادة --</option>';
+            function getSelectedGradeIds() {
+                return Array.from(checkboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+            }
 
-                if (gradeId) {
-                    fetch(`/Lecture/GetCoursesByGrade?gradeId=${gradeId}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            data.forEach(course => {
-                                var option = document.createElement('option');
-                                option.value = course.value;
-                                option.textContent = course.text;
-                                courseSelect.appendChild(option);
-                            });
-                        })
-                        .catch(error => console.error('Error fetching courses:', error));
+            function loadCourses() {
+                var selectedGrades = getSelectedGradeIds();
+
+                if (selectedGrades.length === 0) {
+                    courseSelect.innerHTML = '<option value="">-- اختر المادة --</option>';
+                    courseHelp.classList.remove('hidden');
+                    return;
                 }
-            });
+
+                courseHelp.classList.add('hidden');
+
+                // نمرر جميع الصفوف للـ API
+                var params = new URLSearchParams();
+                selectedGrades.forEach(id => params.append('gradeIds', id));
+
+                courseSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+
+                fetch(`/Lecture/GetCoursesByGrades?${params.toString()}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        courseSelect.innerHTML = '<option value="">-- اختر المادة --</option>';
+                        data.forEach(course => {
+                            var option = document.createElement('option');
+                            option.value = course.value;
+                            option.textContent = course.text;
+                            courseSelect.appendChild(option);
+                        });
+                        
+                        if (data.length === 0) {
+                            courseHelp.textContent = 'لا توجد مادة مشتركة مسجلة في جميع الصفوف المختارة.';
+                            courseHelp.classList.remove('hidden');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching courses:', error);
+                        courseSelect.innerHTML = '<option value="">-- اختر المادة --</option>';
+                    });
+            }
+
+            checkboxes.forEach(cb => cb.addEventListener('change', loadCourses));
+
+            // تحميل المواد عند تحميل الصفحة إذا كان هناك صفوف محددة
+            if (getSelectedGradeIds().length > 0) loadCourses();
         });
     </script>
 }

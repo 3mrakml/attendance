@@ -8,6 +8,6 @@ namespace Attendence_System.Models
         // العلاقات
         public ICollection<Student> Students { get; set; } = new List<Student>();
         public ICollection<CourseGrade> CourseGrades { get; set; } = new List<CourseGrade>();
-        public ICollection<Lecture> Lectures { get; set; } = new List<Lecture>();
+        public ICollection<LectureGrade> LectureGrades { get; set; } = new List<LectureGrade>();
     }
 }

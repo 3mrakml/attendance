@@ -102,7 +102,16 @@ namespace Attendence_System.Controllers
 
             var model = new LectureWithCourse
             {
-                Lectures = lectures.Select(l => new Lecture { LectureId = l.LectureId, Title = l.Title, Grade = l.Grade }).ToList(),
+                Lectures = lectures.Select(l => new Lecture
+                {
+                    LectureId = l.LectureId,
+                    Title = l.Title,
+                    LectureGrades = l.LectureGrades,
+                    IsAttendanceClosed = l.IsAttendanceClosed,
+                    DateTime = l.DateTime,
+                    CourseId = l.CourseId,
+                    QRCode = l.QRCode
+                }).ToList(),
                 CouresName = course.Name,
                 CourseId = course.CourseId,
             };
