@@ -1,7 +1,9 @@
 using Attendence_System.Models;
 using Attendence_System.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Attendence_System.Controllers
 {
@@ -9,10 +11,12 @@ namespace Attendence_System.Controllers
     public class GradeController : Controller
     {
         private readonly IGradeService _gradeService;
+        private readonly UserManager<AppUser> _userManager;
 
-        public GradeController(IGradeService gradeService)
+        public GradeController(IGradeService gradeService, UserManager<AppUser> userManager)
         {
             _gradeService = gradeService;
+            _userManager = userManager;
         }
 
         public async Task<IActionResult> Index()
@@ -25,6 +29,12 @@ namespace Attendence_System.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Grade grade)
         {
+            var tenantId = User.FindFirstValue("TenantId");
+            grade.TenantId = tenantId!;
+
+            ModelState.Remove("TenantId");
+            ModelState.Remove("Tenant");
+
             if (ModelState.IsValid)
             {
                 await _gradeService.AddGradeAsync(grade);
@@ -42,9 +52,8 @@ namespace Attendence_System.Controllers
         {
             var result = await _gradeService.DeleteGradeAsync(id);
             if (result)
-            {
                 return Json(new { success = true, message = "تم الحذف بنجاح." });
-            }
+
             return Json(new { success = false, message = "حدث خطأ أثناء الحذف." });
         }
     }

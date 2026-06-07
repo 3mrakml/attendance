@@ -2,12 +2,8 @@ using Attendence_System.Models;
 using Attendence_System.Services;
 using Attendence_System.ViewModel;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace Attendence_System.Controllers
 {
@@ -19,40 +15,33 @@ namespace Attendence_System.Controllers
         private readonly IStudentService _studentService;
         private readonly IGradeService _gradeService;
         private readonly IExcelService _excelService;
-        private readonly UserManager<AppUser> _userManager;
-        private readonly ILogger<CourseController> _logger;
 
         public CourseController(
             ICourseService courseService,
             ILectureService lectureService,
             IStudentService studentService,
             IGradeService gradeService,
-            IExcelService excelService,
-            UserManager<AppUser> userManager,
-            ILogger<CourseController> logger)
+            IExcelService excelService)
         {
             _courseService = courseService;
             _lectureService = lectureService;
             _studentService = studentService;
             _gradeService = gradeService;
             _excelService = excelService;
-            _userManager = userManager;
-            _logger = logger;
         }
 
         // ─── Courses ───────────────────────────────────────────────────────────
 
         [HttpGet]
-        public async Task<IActionResult> Index(CancellationToken cancellationToken)
+        public async Task<IActionResult> Index()
         {
-            var userId = _userManager.GetUserId(User);
-            var courses = await _courseService.GetCoursesByUserAsync(userId);
+            var courses = await _courseService.GetAllCoursesAsync();
             var availableGrades = await _gradeService.GetAllGradesAsync();
 
-            var model = new CourseViewModel 
-            { 
+            var model = new CourseViewModel
+            {
                 Courses = courses,
-                AvailableGrades = availableGrades 
+                AvailableGrades = availableGrades
             };
             return View(model);
         }
@@ -61,11 +50,11 @@ namespace Attendence_System.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(CourseViewModel model)
         {
-            var userId = _userManager.GetUserId(User);
+            var tenantId = User.FindFirstValue("TenantId");
             var newCourse = new Course
             {
                 Name = model.Name,
-                UserId = userId
+                TenantId = tenantId!
             };
 
             await _courseService.CreateCourseAsync(newCourse, model.SelectedGradeIds);
@@ -76,8 +65,7 @@ namespace Attendence_System.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteCourse(int id)
         {
-            var userId = _userManager.GetUserId(User);
-            var success = await _courseService.DeleteCourseAsync(id, userId);
+            var success = await _courseService.DeleteCourseAsync(id);
 
             if (!success)
                 return Json(new { success = false, message = "Course not found or access denied" });
@@ -93,10 +81,6 @@ namespace Attendence_System.Controllers
             var course = await _courseService.GetCourseByIdAsync(id);
             if (course == null)
                 return NotFound();
-
-            var userId = _userManager.GetUserId(User);
-            if (course.UserId != userId)
-                return Forbid();
 
             var lectures = await _lectureService.GetLecturesByCourseAsync(id);
 
@@ -139,10 +123,6 @@ namespace Attendence_System.Controllers
             if (course == null)
                 return NotFound();
 
-            var userId = _userManager.GetUserId(User);
-            if (course.UserId != userId)
-                return Forbid();
-
             var studentsWithCount = await _studentService.GetCourseAttendanceStatsAsync(id);
 
             var viewModel = new CourseWithStudentsViewModel
@@ -161,12 +141,8 @@ namespace Attendence_System.Controllers
             var course = await _courseService.GetCourseByIdAsync(id);
             if (course == null) return NotFound();
 
-            var userId = _userManager.GetUserId(User);
-            if (course.UserId != userId) return Forbid();
-
             var studentsWithCount = await _studentService.GetCourseAttendanceStatsAsync(id);
 
-            // Define custom columns
             var columns = new Dictionary<string, Func<StudentWithCount, object>>
             {
                 { "الاسم بالكامل", s => s.FullName },

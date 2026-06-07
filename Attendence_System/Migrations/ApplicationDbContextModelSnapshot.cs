@@ -4,19 +4,16 @@ using Attendence_System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Attendence_System.Data.Migrations
+namespace Attendence_System.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260601173658_FinalDbCleanup")]
-    partial class FinalDbCleanup
+    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -75,6 +72,9 @@ namespace Attendence_System.Data.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");
 
@@ -92,6 +92,8 @@ namespace Attendence_System.Data.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("Users", "security");
                 });
 
@@ -103,17 +105,22 @@ namespace Attendence_System.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CourseId"));
 
+                    b.Property<string>("AppUserId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("UserId")
+                    b.Property<string>("TenantId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("CourseId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("AppUserId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Courses");
                 });
@@ -145,7 +152,13 @@ namespace Attendence_System.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.HasKey("GradeId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Grades");
                 });
@@ -164,9 +177,6 @@ namespace Attendence_System.Data.Migrations
                     b.Property<DateTime>("DateTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("GradeId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsAttendanceClosed")
                         .HasColumnType("bit");
 
@@ -181,9 +191,22 @@ namespace Attendence_System.Data.Migrations
 
                     b.HasIndex("CourseId");
 
+                    b.ToTable("Lectures");
+                });
+
+            modelBuilder.Entity("Attendence_System.Models.LectureGrade", b =>
+                {
+                    b.Property<int>("LectureId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("GradeId")
+                        .HasColumnType("int");
+
+                    b.HasKey("LectureId", "GradeId");
+
                     b.HasIndex("GradeId");
 
-                    b.ToTable("Lectures");
+                    b.ToTable("LectureGrades");
                 });
 
             modelBuilder.Entity("Attendence_System.Models.Student", b =>
@@ -194,6 +217,9 @@ namespace Attendence_System.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StudentId"));
 
+                    b.Property<int>("Age")
+                        .HasColumnType("int");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -201,14 +227,17 @@ namespace Attendence_System.Data.Migrations
                     b.Property<int>("GradeId")
                         .HasColumnType("int");
 
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("QRToken")
                         .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("SeatNumber")
+                    b.Property<string>("TenantId")
                         .IsRequired()
-                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("StudentId");
@@ -217,6 +246,8 @@ namespace Attendence_System.Data.Migrations
 
                     b.HasIndex("QRToken")
                         .IsUnique();
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Students");
                 });
@@ -239,6 +270,48 @@ namespace Attendence_System.Data.Migrations
                     b.HasIndex("LectureId");
 
                     b.ToTable("StudentLectures");
+                });
+
+            modelBuilder.Entity("Attendence_System.Models.SystemSetting", b =>
+                {
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("TenantId", "Key");
+
+                    b.ToTable("SystemSettings");
+                });
+
+            modelBuilder.Entity("Attendence_System.Models.Tenant", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Tenants");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -374,15 +447,29 @@ namespace Attendence_System.Data.Migrations
                     b.ToTable("UserTokens", "security");
                 });
 
+            modelBuilder.Entity("Attendence_System.Models.AppUser", b =>
+                {
+                    b.HasOne("Attendence_System.Models.Tenant", "Tenant")
+                        .WithMany("Users")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("Attendence_System.Models.Course", b =>
                 {
-                    b.HasOne("Attendence_System.Models.AppUser", "User")
+                    b.HasOne("Attendence_System.Models.AppUser", null)
                         .WithMany("Courses")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("AppUserId");
+
+                    b.HasOne("Attendence_System.Models.Tenant", "Tenant")
+                        .WithMany("Courses")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("User");
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Attendence_System.Models.CourseGrade", b =>
@@ -404,6 +491,17 @@ namespace Attendence_System.Data.Migrations
                     b.Navigation("Grade");
                 });
 
+            modelBuilder.Entity("Attendence_System.Models.Grade", b =>
+                {
+                    b.HasOne("Attendence_System.Models.Tenant", "Tenant")
+                        .WithMany("Grades")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("Attendence_System.Models.Lecture", b =>
                 {
                     b.HasOne("Attendence_System.Models.Course", "Course")
@@ -412,15 +510,26 @@ namespace Attendence_System.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("Attendence_System.Models.LectureGrade", b =>
+                {
                     b.HasOne("Attendence_System.Models.Grade", "Grade")
-                        .WithMany("Lectures")
+                        .WithMany("LectureGrades")
                         .HasForeignKey("GradeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Course");
+                    b.HasOne("Attendence_System.Models.Lecture", "Lecture")
+                        .WithMany("LectureGrades")
+                        .HasForeignKey("LectureId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Grade");
+
+                    b.Navigation("Lecture");
                 });
 
             modelBuilder.Entity("Attendence_System.Models.Student", b =>
@@ -428,10 +537,18 @@ namespace Attendence_System.Data.Migrations
                     b.HasOne("Attendence_System.Models.Grade", "Grade")
                         .WithMany("Students")
                         .HasForeignKey("GradeId")
-                        .OnDelete(DeleteBehavior.SetNull)
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Attendence_System.Models.Tenant", "Tenant")
+                        .WithMany("Students")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Grade");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Attendence_System.Models.StudentLecture", b =>
@@ -451,6 +568,17 @@ namespace Attendence_System.Data.Migrations
                     b.Navigation("Lecture");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("Attendence_System.Models.SystemSetting", b =>
+                {
+                    b.HasOne("Attendence_System.Models.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -520,19 +648,32 @@ namespace Attendence_System.Data.Migrations
                 {
                     b.Navigation("CourseGrades");
 
-                    b.Navigation("Lectures");
+                    b.Navigation("LectureGrades");
 
                     b.Navigation("Students");
                 });
 
             modelBuilder.Entity("Attendence_System.Models.Lecture", b =>
                 {
+                    b.Navigation("LectureGrades");
+
                     b.Navigation("StudentLectures");
                 });
 
             modelBuilder.Entity("Attendence_System.Models.Student", b =>
                 {
                     b.Navigation("StudentLectures");
+                });
+
+            modelBuilder.Entity("Attendence_System.Models.Tenant", b =>
+                {
+                    b.Navigation("Courses");
+
+                    b.Navigation("Grades");
+
+                    b.Navigation("Students");
+
+                    b.Navigation("Users");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Attendence_System.Data;
 using Attendence_System.Models;
 using Microsoft.EntityFrameworkCore;
@@ -16,16 +13,16 @@ namespace Attendence_System.Services
             _context = context;
         }
 
-        public async Task<List<Course>> GetCoursesByUserAsync(string userId)
+        public async Task<List<Course>> GetAllCoursesAsync()
         {
+            // Global Query Filter automatically filters by TenantId
             return await _context.Courses
                 .Include(c => c.CourseGrades)
-                .ThenInclude(cg => cg.Grade)
-                .Where(c => c.UserId == userId)
+                    .ThenInclude(cg => cg.Grade)
                 .ToListAsync();
         }
 
-        public async Task<Course> GetCourseByIdAsync(int courseId)
+        public async Task<Course?> GetCourseByIdAsync(int courseId)
         {
             return await _context.Courses
                 .AsNoTracking()
@@ -52,23 +49,21 @@ namespace Attendence_System.Services
             return course;
         }
 
-        public async Task<bool> DeleteCourseAsync(int id, string userId)
+        public async Task<bool> DeleteCourseAsync(int id)
         {
+            // Global filter ensures we can only see our own courses
             var course = await _context.Courses.FindAsync(id);
-            if (course == null || course.UserId != userId)
-            {
-                return false;
-            }
+            if (course == null) return false;
 
             _context.Courses.Remove(course);
             await _context.SaveChangesAsync();
             return true;
         }
 
-        public async Task<List<Course>> GetCoursesByGradeAndUserAsync(int gradeId, string userId)
+        public async Task<List<Course>> GetCoursesByGradeAsync(int gradeId)
         {
             return await _context.Courses
-                .Where(c => c.UserId == userId && c.CourseGrades.Any(cg => cg.GradeId == gradeId))
+                .Where(c => c.CourseGrades.Any(cg => cg.GradeId == gradeId))
                 .ToListAsync();
         }
 

@@ -1,104 +1,147 @@
-using System.Linq;
-using System.Threading.Tasks;
+using Attendence_System.Data;
 using Attendence_System.Models;
 using Attendence_System.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Attendence_System.Controllers
 {
     [AllowAnonymous]
+    [Route("Public/{username}/[action]")]
     public class PublicController : Controller
     {
-        private readonly IStudentService _studentService;
-        private readonly IGradeService _gradeService;
-        private readonly ISystemSettingService _settingService;
+        private readonly ApplicationDbContext _context;
         private readonly IQRCodeService _qrCodeService;
+        private readonly UserManager<AppUser> _userManager;
 
         public PublicController(
-            IStudentService studentService, 
-            IGradeService gradeService, 
-            ISystemSettingService settingService,
-            IQRCodeService qrCodeService)
+            ApplicationDbContext context,
+            IQRCodeService qrCodeService,
+            UserManager<AppUser> userManager)
         {
-            _studentService = studentService;
-            _gradeService = gradeService;
-            _settingService = settingService;
+            _context = context;
             _qrCodeService = qrCodeService;
+            _userManager = userManager;
         }
 
         [HttpGet]
-        public async Task<IActionResult> Register()
+        public async Task<IActionResult> Register(string username)
         {
-            var isRegistrationOpenStr = await _settingService.GetSettingAsync("IsRegistrationOpen", "false");
-            if (isRegistrationOpenStr != "true")
-            {
-                return View("RegistrationClosed");
-            }
+            if (string.IsNullOrEmpty(username)) return NotFound("Username is required.");
+            var user = await _userManager.FindByNameAsync(username);
+            if (user == null || user.TenantId == null) return NotFound("Teacher not found.");
 
-            ViewBag.Grades = await _gradeService.GetAllGradesAsync();
+            // Load settings for this specific tenant (bypass global filter)
+            var isRegistrationOpenStr = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == user.TenantId && s.Key == "IsRegistrationOpen")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync() ?? "false";
+
+            if (isRegistrationOpenStr != "true")
+                return View("RegistrationClosed");
+
+            // Load grades for this specific tenant (bypass global filter)
+            var grades = await _context.Grades
+                .IgnoreQueryFilters()
+                .Where(g => g.TenantId == user.TenantId)
+                .ToListAsync();
+
+            ViewBag.TeacherUsername = username;
+            ViewBag.Grades = grades;
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(Student model)
+        public async Task<IActionResult> Register(string username, Student model)
         {
-            var isRegistrationOpenStr = await _settingService.GetSettingAsync("IsRegistrationOpen", "false");
+            if (string.IsNullOrEmpty(username)) return NotFound("Username is required.");
+            var user = await _userManager.FindByNameAsync(username);
+            if (user == null || user.TenantId == null) return NotFound("Teacher not found.");
+
+            var isRegistrationOpenStr = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == user.TenantId && s.Key == "IsRegistrationOpen")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync() ?? "false";
+
             if (isRegistrationOpenStr != "true")
-            {
                 return View("RegistrationClosed");
-            }
 
             ModelState.Remove("QRToken");
+            ModelState.Remove("TenantId");
+            ModelState.Remove("Tenant");
 
             if (!ModelState.IsValid)
             {
-                ViewBag.Grades = await _gradeService.GetAllGradesAsync();
+                var grades = await _context.Grades
+                    .IgnoreQueryFilters()
+                    .Where(g => g.TenantId == user.TenantId)
+                    .ToListAsync();
+
+                ViewBag.TeacherUsername = username;
+                ViewBag.Grades = grades;
                 return View(model);
             }
 
-            // Check if phone number already exists
+            model.TenantId = user.TenantId;
+
+            // Check if phone number already exists for this tenant
             if (!string.IsNullOrWhiteSpace(model.PhoneNumber))
             {
-                var existingStudent = await _studentService.GetStudentByPhoneNumberAsync(model.PhoneNumber);
+                var existingStudent = await _context.Students
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(s => s.PhoneNumber == model.PhoneNumber && s.TenantId == user.TenantId);
+
                 if (existingStudent != null)
-                {
-                    // User already registered, redirect to success to show their card
-                    return RedirectToAction("RegistrationSuccess", new { id = existingStudent.StudentId });
-                }
+                    return RedirectToAction("RegistrationSuccess", new { username, id = existingStudent.StudentId });
             }
 
-            // Generate unique 4-digit QRToken
+            // Generate unique 4-digit QRToken for this tenant
             string token;
             do { token = System.Random.Shared.Next(1000, 10000).ToString(); }
-            while (await _studentService.StudentExistsAsync(token));
+            while (await _context.Students
+                .IgnoreQueryFilters()
+                .AnyAsync(s => s.QRToken == token && s.TenantId == user.TenantId));
+
             model.QRToken = token;
 
-            var newStudent = await _studentService.CreateStudentAsync(model);
+            _context.Students.Add(model);
+            await _context.SaveChangesAsync();
 
-            return RedirectToAction("RegistrationSuccess", new { id = newStudent.StudentId });
+            return RedirectToAction("RegistrationSuccess", new { username, id = model.StudentId });
         }
 
         [HttpGet]
-        public async Task<IActionResult> RegistrationSuccess(int id)
+        public async Task<IActionResult> RegistrationSuccess(string username, int id)
         {
-            var student = await _studentService.GetStudentByIdAsync(id);
+            if (string.IsNullOrEmpty(username)) return NotFound();
+            var user = await _userManager.FindByNameAsync(username);
+            if (user == null || user.TenantId == null) return NotFound();
+
+            var student = await _context.Students
+                .IgnoreQueryFilters()
+                .Include(s => s.Grade)
+                .FirstOrDefaultAsync(s => s.StudentId == id && s.TenantId == user.TenantId);
+
             if (student == null)
-            {
                 return NotFound();
-            }
 
-            // Load grade details
-            if (student.GradeId > 0)
-            {
-                var grades = await _gradeService.GetAllGradesAsync();
-                student.Grade = grades.FirstOrDefault(g => g.GradeId == student.GradeId);
-            }
+            var successMessage = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == user.TenantId && s.Key == "RegistrationSuccessMessage")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync() ?? "تم التسجيل بنجاح! احتفظ بالباركود الخاص بك.";
 
-            var successMessage = await _settingService.GetSettingAsync("RegistrationSuccessMessage", "تم التسجيل بنجاح! احتفظ بالباركود الخاص بك.");
-            var whatsappGroupLink = await _settingService.GetSettingAsync("WhatsAppGroupLink", "");
-            
+            var whatsappGroupLink = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == user.TenantId && s.Key == "WhatsAppGroupLink")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync() ?? "";
+
             ViewBag.SuccessMessage = successMessage;
             ViewBag.WhatsAppGroupLink = whatsappGroupLink;
             ViewBag.QRCode = _qrCodeService.GenerateQRCode(student.QRToken);

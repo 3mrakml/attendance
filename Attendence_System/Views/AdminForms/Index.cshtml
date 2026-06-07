@@ -58,7 +58,7 @@
             رابط التسجيل للطلاب
         </h3>
         <div class="flex items-center gap-3">
-            <input type="text" readonly value="@Url.Action("Register", "Public", null, Context.Request.Scheme)" class="flex-grow p-3 rounded-xl border border-blue-200 bg-white text-slate-600 font-mono text-sm" id="publicLink" />
+            <input type="text" readonly value="@Url.Action("Register", "Public", new { username = ViewBag.TeacherUsername }, Context.Request.Scheme)" class="flex-grow p-3 rounded-xl border border-blue-200 bg-white text-slate-600 font-mono text-sm" id="publicLink" />
             <button type="button" onclick="copyLink()" class="btn bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 whitespace-nowrap">
                 <i data-lucide="copy" class="w-4 h-4 inline-block ml-1"></i> نسخ الرابط
             </button>
@@ -67,13 +67,25 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         function copyLink() {
             var copyText = document.getElementById("publicLink");
             copyText.select();
             copyText.setSelectionRange(0, 99999); 
             navigator.clipboard.writeText(copyText.value).then(() => {
-                alert("تم نسخ الرابط بنجاح!");
+                Swal.fire({
+                    toast: true,
+                    position: 'top',
+                    icon: 'success',
+                    title: 'تم نسخ الرابط بنجاح!',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    timerProgressBar: true,
+                    background: '#f8fafc',
+                    color: '#334155',
+                    iconColor: '#10b981'
+                });
             });
         }
     </script>

@@ -68,8 +68,23 @@
                     </div>
                     <div class="p-4 flex-1 bg-slate-50/50 overflow-y-auto min-h-[400px] max-h-[600px]">
                         <ul id="scanLog" class="space-y-3">
-                            <!-- Logs will be prepended here -->
-                            <li class="text-center text-slate-400 text-sm mt-10" id="emptyLogMsg">لم يتم مسح أي حضور بعد.</li>
+                            @if (ViewBag.AttendedStudents != null && ((List<string>)ViewBag.AttendedStudents).Count > 0)
+                            {
+                                foreach (var name in ((List<string>)ViewBag.AttendedStudents).AsEnumerable().Reverse())
+                                {
+                                    <li class="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm flex items-start shadow-sm">
+                                        <i class="bi bi-check-circle-fill text-emerald-500 ml-3 text-lg mt-0.5"></i>
+                                        <div class="flex-1">
+                                            <span class="block font-bold mb-1 opacity-75 text-xs">حضر مسبقاً</span>
+                                            <span class="font-medium">@name</span>
+                                        </div>
+                                    </li>
+                                }
+                            }
+                            else
+                            {
+                                <li class="text-center text-slate-400 text-sm mt-10" id="emptyLogMsg">لم يتم مسح أي حضور بعد.</li>
+                            }
                         </ul>
                     </div>
                 </div>
@@ -98,11 +113,59 @@
         const scanCountEl = document.getElementById('scanCount');
         const usbScannerInput = document.getElementById('usbScannerInput');
         const emptyLogMsg = document.getElementById('emptyLogMsg');
-        let scanCount = 0;
+        let scanCount = @(ViewBag.AttendedStudents != null ? ((List<string>)ViewBag.AttendedStudents).Count : 0);
         let isProcessing = false;
+        
+        // Update header on load
+        scanCountEl.innerText = `${scanCount} تم مسحه`;
 
-        const successBeep = new Audio('https://www.soundjay.com/buttons/beep-07.wav');
-        const errorBeep = new Audio('https://www.soundjay.com/buttons/beep-10.wav');
+        // Initialize Web Audio API for reliable beeps
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Initialize on any user interaction to unlock audio
+        document.addEventListener('click', initAudio, { once: true });
+        document.addEventListener('keydown', initAudio, { once: true });
+
+        function playBeep(isSuccess) {
+            try {
+                initAudio();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                if (isSuccess) {
+                    // Short, high-pitched success beep (ding)
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+                    oscillator.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.1); // Slide to A6
+                    gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.15);
+                } else {
+                    // Longer, low-pitched error beep (buzz)
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.3);
+                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.3);
+                }
+            } catch (e) {
+                console.error("Audio playback failed:", e);
+            }
+        }
 
         function addLog(message, isSuccess) {
             if(emptyLogMsg) emptyLogMsg.style.display = 'none';
@@ -124,10 +187,18 @@
             scanLog.prepend(li);
         }
 
+        let lastScannedId = "";
+
         function processScanResult(decodedText) {
             if (isProcessing) return;
             const studentId = decodedText.trim();
             if (!studentId) return;
+
+            // Prevent double-scanning the exact same card rapidly (within 2 seconds)
+            if (lastScannedId === studentId) return;
+            lastScannedId = studentId;
+            setTimeout(() => { lastScannedId = ""; }, 2000);
+
             isProcessing = true;
 
             fetch('/Lecture/RegisterAttendance', {
@@ -138,7 +209,7 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    successBeep.play().catch(e => console.log('Audio play blocked:', e));
+                    playBeep(true);
                     scanCount++;
                     scanCountEl.innerText = `${scanCount} تم مسحه`;
                     addLog(data.message, true);
@@ -149,11 +220,13 @@
                         icon: 'success',
                         title: data.message,
                         showConfirmButton: false,
-                        timer: 2000,
-                        timerProgressBar: true
+                        timer: 1200,
+                        timerProgressBar: false,
+                        showClass: { popup: '' }, // Disable show animation
+                        hideClass: { popup: '' }  // Disable hide animation
                     });
                 } else {
-                    errorBeep.play().catch(e => console.log('Audio play blocked:', e));
+                    playBeep(false);
                     addLog(data.message, false);
 
                     Swal.fire({
@@ -162,13 +235,15 @@
                         icon: 'error',
                         title: data.message,
                         showConfirmButton: false,
-                        timer: 2500,
-                        timerProgressBar: true
+                        timer: 1500,
+                        timerProgressBar: false,
+                        showClass: { popup: '' },
+                        hideClass: { popup: '' }
                     });
                 }
             })
             .catch(() => {
-                errorBeep.play().catch(e => console.log('Audio play blocked:', e));
+                playBeep(false);
                 const errMsg = 'حدث خطأ في الاتصال بالخادم.';
                 addLog(errMsg, false);
                 Swal.fire({
@@ -177,18 +252,18 @@
                     icon: 'error',
                     title: errMsg,
                     showConfirmButton: false,
-                    timer: 2500,
-                    timerProgressBar: true
+                    timer: 1500,
+                    timerProgressBar: false,
+                    showClass: { popup: '' },
+                    hideClass: { popup: '' }
                 });
             })
             .finally(() => {
-                setTimeout(() => {
-                    isProcessing = false;
-                    if (usbScannerInput) {
-                        usbScannerInput.value = '';
-                        usbScannerInput.focus();
-                    }
-                }, 1500);
+                isProcessing = false;
+                if (usbScannerInput) {
+                    usbScannerInput.value = '';
+                    usbScannerInput.focus();
+                }
             });
         }
 

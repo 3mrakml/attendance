@@ -1,11 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Attendence_System.Models;
 using Attendence_System.Services;
 using Attendence_System.ViewModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Attendence_System.Controllers
 {
@@ -18,8 +16,8 @@ namespace Attendence_System.Controllers
         private readonly IExcelService _excelService;
 
         public ReportController(
-            IStudentService studentService, 
-            IGradeService gradeService, 
+            IStudentService studentService,
+            IGradeService gradeService,
             ISystemSettingService settingService,
             IExcelService excelService)
         {
@@ -50,7 +48,6 @@ namespace Attendence_System.Controllers
                 });
             }
 
-            // Calculate final scores
             foreach (var item in studentsReport)
             {
                 var settings = gradeSettings.FirstOrDefault(g => g.GradeId == item.GradeId);
@@ -101,14 +98,12 @@ namespace Attendence_System.Controllers
                 gradeSettings[grade.GradeId] = double.TryParse(valStr, out var parsed) ? parsed : 10;
             }
 
-            // Calculate final scores
             foreach (var item in studentsReport)
             {
                 double maxMarks = gradeSettings.ContainsKey(item.GradeId) ? gradeSettings[item.GradeId] : 10;
                 item.CalculatedScore = Math.Round((item.AttendancePercentage / 100.0) * maxMarks, 2);
             }
 
-            // Apply Sorting
             if (sortCol.HasValue)
             {
                 Func<StudentReportItem, object> keySelector = sortCol.Value switch
@@ -123,8 +118,8 @@ namespace Attendence_System.Controllers
                     _ => s => s.FullName
                 };
 
-                studentsReport = sortAsc 
-                    ? studentsReport.OrderBy(keySelector).ToList() 
+                studentsReport = sortAsc
+                    ? studentsReport.OrderBy(keySelector).ToList()
                     : studentsReport.OrderByDescending(keySelector).ToList();
             }
 
@@ -140,9 +135,9 @@ namespace Attendence_System.Controllers
             };
 
             var fileBytes = _excelService.ExportToExcel(studentsReport, "ComprehensiveReport", columns);
-            
-            string fileName = gradeId.HasValue 
-                ? $"Report_Grade_{gradeId.Value}_{DateTime.Now:yyyyMMdd}.xlsx" 
+
+            string fileName = gradeId.HasValue
+                ? $"Report_Grade_{gradeId.Value}_{DateTime.Now:yyyyMMdd}.xlsx"
                 : $"ComprehensiveReport_{DateTime.Now:yyyyMMdd}.xlsx";
 
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);

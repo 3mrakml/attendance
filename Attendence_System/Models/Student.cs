@@ -4,14 +4,19 @@ namespace Attendence_System.Models
 {
     public class Student
     {
-        public int StudentId { get; set; }         // معرف الطالب (PK)
-        public string FullName { get; set; }        // الاسم الكامل
+        public int StudentId { get; set; }
+        public string FullName { get; set; } = string.Empty;
+
         [MaxLength(450)]
-        public string QRToken { get; set; }         // رمز QR الفريد (auto-generated)
-        public int Age { get; set; }                // السن
+        public string QRToken { get; set; } = string.Empty;
+        public int Age { get; set; }
 
         [MaxLength(20)]
-        public string? PhoneNumber { get; set; }    // رقم هاتف الطالب
+        public string? PhoneNumber { get; set; }
+
+        // Multi-tenancy
+        public string TenantId { get; set; } = string.Empty;
+        public Tenant? Tenant { get; set; }
 
         public ICollection<StudentLecture>? StudentLectures { get; set; }
 

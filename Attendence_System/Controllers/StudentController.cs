@@ -1,9 +1,8 @@
-using System.Linq;
-using System.Threading.Tasks;
 using Attendence_System.Models;
 using Attendence_System.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Attendence_System.Controllers
 {
@@ -14,7 +13,10 @@ namespace Attendence_System.Controllers
         private readonly IQRCodeService _qrCodeService;
         private readonly IGradeService _gradeService;
 
-        public StudentController(IStudentService studentService, IQRCodeService qrCodeService, IGradeService gradeService)
+        public StudentController(
+            IStudentService studentService,
+            IQRCodeService qrCodeService,
+            IGradeService gradeService)
         {
             _studentService = studentService;
             _qrCodeService = qrCodeService;
@@ -25,15 +27,15 @@ namespace Attendence_System.Controllers
         public async Task<IActionResult> Index()
         {
             var students = await _studentService.GetAllStudentsAsync();
-            
+
             ViewBag.StudentQRCodes = students.ToDictionary(
                 s => s.StudentId,
                 s => _qrCodeService.GenerateQRCode(s.QRToken)
             );
-            
+
             ViewBag.Grades = await _gradeService.GetAllGradesAsync();
             ViewBag.AttendancePercentages = await _studentService.GetStudentsAttendancePercentagesAsync();
-            
+
             return View(students);
         }
 
@@ -48,11 +50,15 @@ namespace Attendence_System.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Student model)
         {
-            // Auto-generate QR Token (unique, no duplicates)
             ModelState.Remove("QRToken");
+            ModelState.Remove("TenantId");
+            ModelState.Remove("Tenant");
+
             if (ModelState.IsValid)
             {
-                // توليد QRToken فريد مكون من 4 أرقام
+                var tenantId = User.FindFirstValue("TenantId");
+                model.TenantId = tenantId!;
+
                 string token;
                 do { token = System.Random.Shared.Next(1000, 10000).ToString(); }
                 while (await _studentService.StudentExistsAsync(token));
@@ -71,6 +77,8 @@ namespace Attendence_System.Controllers
         public async Task<IActionResult> Edit(Student model)
         {
             ModelState.Remove("QRToken");
+            ModelState.Remove("TenantId");
+            ModelState.Remove("Tenant");
 
             if (!ModelState.IsValid)
             {
@@ -95,7 +103,7 @@ namespace Attendence_System.Controllers
             var report = await _studentService.GetStudentReportAsync(id);
             if (report == null)
             {
-                TempData["ErrorMessage"] = "لم يتم العثور على الطالب المكتوب.";
+                TempData["ErrorMessage"] = "لم يتم العثور على الطالب المكتوب أو لا تملك صلاحية الوصول إليه.";
                 return RedirectToAction("Index");
             }
             return View(report);
@@ -106,19 +114,14 @@ namespace Attendence_System.Controllers
         {
             var student = await _studentService.GetStudentByIdAsync(id);
             if (student == null)
-            {
                 return NotFound();
-            }
 
-            // Retrieve grade name if exists
             if (student.GradeId > 0)
             {
                 var grades = await _gradeService.GetAllGradesAsync();
                 var grade = grades.FirstOrDefault(g => g.GradeId == student.GradeId);
                 if (grade != null)
-                {
                     student.Grade = grade;
-                }
             }
 
             ViewBag.QRCode = _qrCodeService.GenerateQRCode(student.QRToken);
@@ -130,9 +133,7 @@ namespace Attendence_System.Controllers
         {
             var success = await _studentService.DeleteStudentAsync(id);
             if (!success)
-            {
                 return NotFound();
-            }
 
             return Ok();
         }

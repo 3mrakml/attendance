@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Attendence_System.Data;
 using Attendence_System.Models;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +25,7 @@ namespace Attendence_System.Services
                 .ToListAsync();
         }
 
-        public async Task<Lecture> GetLectureByIdAsync(int id)
+        public async Task<Lecture?> GetLectureByIdAsync(int id)
         {
             return await _context.Lectures
                 .Include(l => l.Course)
@@ -42,7 +39,6 @@ namespace Attendence_System.Services
             _context.Lectures.Add(lecture);
             await _context.SaveChangesAsync();
 
-            // ربط المحاضرة بكل الصفوف المختارة
             foreach (var gradeId in gradeIds)
             {
                 _context.LectureGrades.Add(new LectureGrade
@@ -53,7 +49,6 @@ namespace Attendence_System.Services
             }
             await _context.SaveChangesAsync();
 
-            // Generate QR code with the newly generated ID
             lecture.QRCode = _qrCodeService.GenerateQRCode(lecture.LectureId.ToString());
             _context.Lectures.Update(lecture);
             await _context.SaveChangesAsync();

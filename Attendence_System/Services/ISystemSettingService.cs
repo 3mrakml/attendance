@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 namespace Attendence_System.Services
 {
     public interface ISystemSettingService

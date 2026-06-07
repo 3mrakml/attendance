@@ -82,7 +82,7 @@
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
-            <form asp-controller="Grade" asp-action="Create" method="post">
+            <form asp-controller="Grade" asp-action="Create" method="post" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerHTML = 'جاري الإضافة...';">
                 @Html.AntiForgeryToken()
                 <div class="p-6">
                     <label for="Name" class="block text-sm font-semibold text-slate-700 mb-2">اسم الصف / الفرقة</label>

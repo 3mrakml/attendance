@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Attendence_System.Data;
 using Attendence_System.Models;
 using Attendence_System.ViewModel;
@@ -20,22 +16,23 @@ namespace Attendence_System.Services
 
         public async Task<List<Student>> GetAllStudentsAsync()
         {
+            // Global Query Filter automatically filters by TenantId
             return await _context.Students
                 .Include(s => s.Grade)
                 .ToListAsync();
         }
 
-        public async Task<Student> GetStudentByIdAsync(int id)
+        public async Task<Student?> GetStudentByIdAsync(int id)
         {
-            return await _context.Students.FindAsync(id);
+            return await _context.Students.FirstOrDefaultAsync(s => s.StudentId == id);
         }
 
-        public async Task<Student> GetStudentByIdCollegeAsync(string qrToken)
+        public async Task<Student?> GetStudentByIdCollegeAsync(string qrToken)
         {
             return await _context.Students.FirstOrDefaultAsync(s => s.QRToken == qrToken);
         }
 
-        public async Task<Student> GetStudentByPhoneNumberAsync(string phoneNumber)
+        public async Task<Student?> GetStudentByPhoneNumberAsync(string phoneNumber)
         {
             if (string.IsNullOrWhiteSpace(phoneNumber)) return null;
             return await _context.Students.FirstOrDefaultAsync(s => s.PhoneNumber == phoneNumber);
@@ -48,7 +45,6 @@ namespace Attendence_System.Services
 
         public async Task<Student> CreateStudentAsync(Student student)
         {
-            // لا يوجد AttendenceNumber - يُحسب ديناميكياً من StudentLectures (3NF fix)
             _context.Students.Add(student);
             await _context.SaveChangesAsync();
             return student;
@@ -70,7 +66,7 @@ namespace Attendence_System.Services
 
         public async Task<bool> DeleteStudentAsync(int id)
         {
-            var student = await _context.Students.FindAsync(id);
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.StudentId == id);
             if (student == null) return false;
 
             _context.Students.Remove(student);
@@ -121,7 +117,7 @@ namespace Attendence_System.Services
         {
             var lectures = await _context.Lectures
                 .Include(l => l.StudentLectures)
-                .ThenInclude(ls => ls.Student)
+                    .ThenInclude(ls => ls.Student)
                 .Where(d => d.CourseId == courseId)
                 .ToListAsync();
 
@@ -140,7 +136,7 @@ namespace Attendence_System.Services
             return studentsWithCount;
         }
 
-        public async Task<StudentReportViewModel> GetStudentReportAsync(int studentId)
+        public async Task<StudentReportViewModel?> GetStudentReportAsync(int studentId)
         {
             var student = await _context.Students
                 .Include(s => s.Grade)
@@ -148,7 +144,6 @@ namespace Attendence_System.Services
 
             if (student == null) return null;
 
-            // جلب كل المحاضرات المرتبطة بصف الطالب عبر LectureGrades
             var gradeLectures = await _context.LectureGrades
                 .Where(lg => lg.GradeId == student.GradeId)
                 .Include(lg => lg.Lecture)
@@ -157,7 +152,6 @@ namespace Attendence_System.Services
                 .OrderByDescending(l => l.DateTime)
                 .ToListAsync();
 
-            // جلب سجلات حضور الطالب
             var studentAttendances = await _context.StudentLectures
                 .Where(sl => sl.StudentId == studentId)
                 .ToDictionaryAsync(sl => sl.LectureId, sl => sl);
@@ -182,21 +176,20 @@ namespace Attendence_System.Services
 
             return report;
         }
+
         public async Task<Dictionary<int, double>> GetStudentsAttendancePercentagesAsync()
         {
-            // 1. عدد المحاضرات المتاحة لكل صف عبر LectureGrades
             var lecturesPerGrade = await _context.LectureGrades
                 .GroupBy(lg => lg.GradeId)
                 .Select(g => new { GradeId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.GradeId, x => x.Count);
 
-            // 2. عدد المحاضرات التي حضرها كل طالب
             var attendancePerStudent = await _context.StudentLectures
                 .GroupBy(sl => sl.StudentId)
                 .Select(g => new { StudentId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.StudentId, x => x.Count);
 
-            // 3. الطلاب وصفوفهم
+            // Global filter already scopes students to the current tenant
             var students = await _context.Students
                 .Select(s => new { s.StudentId, s.GradeId })
                 .ToListAsync();
@@ -204,16 +197,12 @@ namespace Attendence_System.Services
             var percentages = new Dictionary<int, double>();
             foreach (var s in students)
             {
-                int totalLectures = lecturesPerGrade.ContainsKey(s.GradeId)
-                    ? lecturesPerGrade[s.GradeId] : 0;
+                int totalLectures = lecturesPerGrade.ContainsKey(s.GradeId) ? lecturesPerGrade[s.GradeId] : 0;
+                int attended = attendancePerStudent.ContainsKey(s.StudentId) ? attendancePerStudent[s.StudentId] : 0;
 
-                int attended = attendancePerStudent.ContainsKey(s.StudentId)
-                    ? attendancePerStudent[s.StudentId] : 0;
-
-                if (totalLectures == 0)
-                    percentages[s.StudentId] = 0;
-                else
-                    percentages[s.StudentId] = Math.Round(((double)attended / totalLectures) * 100, 1);
+                percentages[s.StudentId] = totalLectures == 0
+                    ? 0
+                    : Math.Round(((double)attended / totalLectures) * 100, 1);
             }
 
             return percentages;
@@ -226,9 +215,7 @@ namespace Attendence_System.Services
                 .AsQueryable();
 
             if (gradeId.HasValue)
-            {
                 query = query.Where(s => s.GradeId == gradeId.Value);
-            }
 
             var students = await query.ToListAsync();
 
@@ -250,9 +237,7 @@ namespace Attendence_System.Services
             {
                 int totalLectures = lecturesPerGrade.ContainsKey(student.GradeId) ? lecturesPerGrade[student.GradeId] : 0;
                 int attended = attendancePerStudent.ContainsKey(student.StudentId) ? attendancePerStudent[student.StudentId] : 0;
-                int absent = totalLectures - attended;
-                if (absent < 0) absent = 0; 
-
+                int absent = Math.Max(0, totalLectures - attended);
                 double percentage = totalLectures == 0 ? 0 : Math.Round(((double)attended / totalLectures) * 100, 1);
 
                 report.Add(new StudentReportItem
@@ -267,7 +252,7 @@ namespace Attendence_System.Services
                     AttendedLectures = attended,
                     AbsentLectures = absent,
                     AttendancePercentage = percentage,
-                    CalculatedScore = 0 
+                    CalculatedScore = 0
                 });
             }
 

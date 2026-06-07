@@ -2,11 +2,9 @@ using Attendence_System.Models;
 using Attendence_System.Services;
 using Attendence_System.ViewModel;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace Attendence_System.Controllers
 {
@@ -18,22 +16,19 @@ namespace Attendence_System.Controllers
         private readonly IStudentService _studentService;
         private readonly IGradeService _gradeService;
         private readonly IExcelService _excelService;
-        private readonly UserManager<AppUser> _userManager;
 
         public LectureController(
             ILectureService lectureService,
             ICourseService courseService,
             IStudentService studentService,
             IGradeService gradeService,
-            IExcelService excelService,
-            UserManager<AppUser> userManager)
+            IExcelService excelService)
         {
             _lectureService = lectureService;
             _courseService = courseService;
             _studentService = studentService;
             _gradeService = gradeService;
             _excelService = excelService;
-            _userManager = userManager;
         }
 
         // ─── Create Lecture ────────────────────────────────────────────────────
@@ -41,12 +36,11 @@ namespace Attendence_System.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
-            var userId = _userManager.GetUserId(User);
             var grades = await _gradeService.GetAllGradesAsync();
 
             var model = new LectureViewModel
             {
-                Courses = new List<SelectListItem>(), // Starts empty, filled via JS
+                Courses = new List<SelectListItem>(),
                 Grades = grades.Select(g => new SelectListItem
                 {
                     Value = g.GradeId.ToString(),
@@ -60,15 +54,9 @@ namespace Attendence_System.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(LectureViewModel model)
         {
-            var userId = _userManager.GetUserId(User);
-
-            // التحقق من اختيار صف واحد على الأقل
             if (model.GradeIds == null || !model.GradeIds.Any())
-            {
                 ModelState.AddModelError("GradeIds", "يجب اختيار صف دراسي واحد على الأقل.");
-            }
 
-            // التحقق من أن المادة مسجلة في جميع الصفوف المختارة
             if (model.CourseId > 0 && model.GradeIds != null && model.GradeIds.Any())
             {
                 foreach (var gradeId in model.GradeIds)
@@ -86,7 +74,7 @@ namespace Attendence_System.Controllers
 
             if (!ModelState.IsValid)
             {
-                var courses = await _courseService.GetCoursesByUserAsync(userId);
+                var courses = await _courseService.GetAllCoursesAsync();
                 var grades = await _gradeService.GetAllGradesAsync();
                 model.Courses = courses.Select(c => new SelectListItem
                 {
@@ -108,9 +96,8 @@ namespace Attendence_System.Controllers
                 DateTime = System.DateTime.Now
             };
 
-            lecture = await _lectureService.CreateLectureAsync(lecture, model.GradeIds);
+            lecture = await _lectureService.CreateLectureAsync(lecture, model.GradeIds!);
 
-            // Redirect directly to the scanner for attendance instead of showing lecture details
             return RedirectToAction("Scan", new { id = lecture.LectureId });
         }
 
@@ -124,17 +111,14 @@ namespace Attendence_System.Controllers
         [HttpGet]
         public async Task<IActionResult> GetCoursesByGrades([FromQuery] List<int> gradeIds)
         {
-            var userId = _userManager.GetUserId(User);
             if (gradeIds == null || !gradeIds.Any())
                 return Json(new List<object>());
 
-            // نبدأ بمواد أول صف
-            var courses = await _courseService.GetCoursesByGradeAndUserAsync(gradeIds[0], userId);
+            var courses = await _courseService.GetCoursesByGradeAsync(gradeIds[0]);
 
-            // نقوم بعمل تقاطع (Intersection) لضمان أن المادة موجودة في جميع الصفوف المختارة
             for (int i = 1; i < gradeIds.Count; i++)
             {
-                var nextGradeCourses = await _courseService.GetCoursesByGradeAndUserAsync(gradeIds[i], userId);
+                var nextGradeCourses = await _courseService.GetCoursesByGradeAsync(gradeIds[i]);
                 var nextGradeCourseIds = nextGradeCourses.Select(c => c.CourseId).ToHashSet();
                 courses = courses.Where(c => nextGradeCourseIds.Contains(c.CourseId)).ToList();
             }
@@ -152,11 +136,6 @@ namespace Attendence_System.Controllers
             if (lecture == null)
                 return NotFound();
 
-            var userId = _userManager.GetUserId(User);
-            if (lecture.Course.UserId != userId)
-                return Forbid();
-
-            // جلب كل طلاب الصفوف المرتبطة بهذه المحاضرة
             var lectureGradeIds = lecture.LectureGrades.Select(lg => lg.GradeId).ToHashSet();
             var allStudents = await _studentService.GetAllStudentsAsync();
             var allStudentsInGrades = allStudents.Where(s => lectureGradeIds.Contains(s.GradeId)).ToList();
@@ -192,9 +171,6 @@ namespace Attendence_System.Controllers
         {
             var lecture = await _lectureService.GetLectureByIdAsync(id);
             if (lecture == null) return NotFound();
-
-            var userId = _userManager.GetUserId(User);
-            if (lecture.Course.UserId != userId) return Forbid();
 
             var lectureGradeIds = lecture.LectureGrades.Select(lg => lg.GradeId).ToHashSet();
             var allStudents = await _studentService.GetAllStudentsAsync();
@@ -234,13 +210,12 @@ namespace Attendence_System.Controllers
             if (lecture == null)
                 return NotFound();
 
-            var userId = _userManager.GetUserId(User);
-            if (lecture.Course.UserId != userId)
-                return Forbid();
-
             ViewBag.LectureTitle = lecture.Title;
             ViewBag.LectureId = lecture.LectureId;
             ViewBag.IsClosed = lecture.IsAttendanceClosed;
+
+            var attendedStudents = await _lectureService.GetStudentsInLectureAsync(id);
+            ViewBag.AttendedStudents = attendedStudents.Select(s => s.FullName).ToList();
 
             return View();
         }

@@ -3,7 +3,11 @@ namespace Attendence_System.Models
     public class Grade
     {
         public int GradeId { get; set; }
-        public string Name { get; set; } // اسم الصف: الفرقة الأولى، الفرقة الثانية، الخ
+        public string Name { get; set; } = string.Empty;
+
+        // Multi-tenancy
+        public string TenantId { get; set; } = string.Empty;
+        public Tenant? Tenant { get; set; }
 
         // العلاقات
         public ICollection<Student> Students { get; set; } = new List<Student>();

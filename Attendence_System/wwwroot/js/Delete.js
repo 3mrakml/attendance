@@ -48,7 +48,16 @@ $(document).ready(function () {
                     headers: {
                         'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
                     },
-                    success: function () {
+                    success: function (response) {
+                        if (response && response.success === false) {
+                            swal.fire(
+                                'عذراً!',
+                                response.message || 'لا يمكن الحذف بسبب وجود بيانات مرتبطة.',
+                                'error'
+                            );
+                            return;
+                        }
+                        
                         swal.fire(
                             'تم الحذف!',
                             `تم حذف ${getTypeName(type)} بنجاح.`,
