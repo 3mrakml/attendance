@@ -1,0 +1,142 @@
+@model IEnumerable<Attendence_System.Models.Student>
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>طباعة كروت الطلاب</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        card: { bg: '#e9eef8', dark: '#34415b', light: '#c9d5f0' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        @@media print {
+            @@page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+            .no-print { display: none !important; }
+            body { 
+                background: white !important; 
+                padding: 0 !important;
+            }
+            .cards-grid {
+                display: block !important;
+                text-align: center;
+                font-size: 0;
+            }
+            .print-wrap {
+                display: inline-block !important;
+                width: 330px !important;
+                height: 193px !important;
+                margin: 15px !important;
+                position: relative;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .card-container {
+                position: absolute !important;
+                top: 0 !important;
+                right: 0 !important;
+                transform: scale(0.55) !important;
+                transform-origin: top right !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border: 1px solid #ccc !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+
+    <!-- Control buttons -->
+    <div class="no-print flex gap-4 mb-8 justify-center">
+        <button onclick="window.print()" class="bg-[#34415b] hover:bg-opacity-90 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-colors flex items-center gap-2">
+            🖨️ طباعة كل الكروت (@Model.Count())
+        </button>
+        <button onclick="window.close()" class="bg-white text-gray-700 font-bold py-3 px-8 rounded-xl shadow-sm border border-gray-200 transition-colors">
+            إغلاق
+        </button>
+    </div>
+
+    <div class="cards-grid flex flex-wrap gap-6 justify-center">
+        @foreach (var student in Model)
+        {
+            var qrCode = ViewBag.StudentQRCodes != null && ((IDictionary<int, string>)ViewBag.StudentQRCodes).ContainsKey(student.StudentId)
+                ? ViewBag.StudentQRCodes[student.StudentId]
+                : "";
+
+            <!-- Card -->
+            <div class="print-wrap">
+                <div class="card-container relative w-[600px] h-[350px] bg-[#e9eef8] overflow-hidden shadow-xl rounded-sm flex items-center flex-shrink-0">
+
+                <!-- Decorations -->
+                <div class="absolute top-0 right-0 w-24 h-24 bg-[#c9d5f0] rounded-bl-full opacity-80"></div>
+                <div class="absolute -top-16 -right-16 w-48 h-48 border-[6px] border-[#34415b] rounded-full opacity-30"></div>
+                <div class="absolute -top-8 -right-8 w-32 h-32 border-[3px] border-[#34415b] rounded-full opacity-50"></div>
+                <div class="absolute top-12 -right-8 w-16 h-24 bg-[#34415b] rounded-full"></div>
+                <div class="absolute bottom-0 left-0 w-32 h-32 bg-[#c9d5f0] rounded-tr-full opacity-90"></div>
+                <div class="absolute bottom-0 left-0 w-20 h-20 bg-[#34415b] rounded-tr-full"></div>
+                <div class="absolute -bottom-20 -left-20 w-64 h-64 border-[4px] border-[#34415b] rounded-full opacity-80"></div>
+                <div class="absolute -bottom-10 -left-10 w-44 h-44 border-[2px] border-[#34415b] rounded-full opacity-60"></div>
+
+                <!-- Content -->
+                <div class="relative z-10 w-full px-12 flex flex-row items-center justify-between">
+                    <!-- Student Info -->
+                    <div class="flex-1 text-right pl-8">
+                        <h1 class="text-4xl font-extrabold text-[#34415b] tracking-tight mb-4">@student.FullName</h1>
+                        <div class="w-full h-[2px] bg-[#34415b] opacity-30 mb-6"></div>
+                        <div class="space-y-4 text-[#34415b] font-medium text-sm">
+                            <div class="flex items-center gap-3">
+                                <div class="w-7 h-7 rounded-full bg-[#34415b] text-white flex items-center justify-center text-xs">QR</div>
+                                <span class="text-base">الرقم: <span class="font-bold font-mono tracking-widest bg-white/50 px-2 py-0.5 rounded">@student.QRToken</span></span>
+                            </div>
+                            @if (student.Age > 0)
+                            {
+                                <div class="flex items-center gap-3">
+                                    <div class="w-7 h-7 rounded-full bg-[#34415b] text-white flex items-center justify-center text-xs">🎂</div>
+                                    <span class="text-base">السن: <span class="font-bold font-mono text-lg">@student.Age</span></span>
+                                </div>
+                            }
+                            <div class="flex items-center gap-3">
+                                <div class="w-7 h-7 rounded-full bg-[#34415b] text-white flex items-center justify-center text-xs">🎓</div>
+                                <span class="text-base">الصف: <span class="font-bold">@(student.Grade?.Name ?? "غير محدد")</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QR Code -->
+                    @if (!string.IsNullOrEmpty(qrCode))
+                    {
+                        <div class="bg-white p-4 rounded-2xl shadow-xl border-4 border-white">
+                            <img src="@qrCode" class="w-40 h-40 object-contain" alt="QR" />
+                        </div>
+                    }
+                </div>
+            </div>
+            </div>
+        }
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center text-gray-500 mt-20 text-xl">لا يوجد طلاب لعرضهم.</div>
+    }
+
+</body>
+</html>

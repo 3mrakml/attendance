@@ -1,0 +1,91 @@
+@model IEnumerable<Attendence_System.Models.Student>
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>تصدير رموز QR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        @@media print {
+            @@page {
+                size: A4;
+                margin: 10mm;
+            }
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            .qr-card {
+                border: 1px solid #e2e8f0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-8 print:p-0">
+
+    <!-- Toolbar -->
+    <div class="no-print flex gap-4 mb-8 justify-center items-center">
+        <div class="text-lg font-bold text-slate-700">
+            🎓 رموز QR لـ @Model.Count() طالب
+        </div>
+        <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-colors flex items-center gap-2">
+            🖨️ طباعة
+        </button>
+        <button onclick="window.close()" class="bg-white text-gray-700 font-bold py-3 px-8 rounded-xl shadow-sm border border-gray-200 transition-colors">
+            إغلاق
+        </button>
+    </div>
+
+    <!-- QR Grid — centered flex wrap to ensure perfect printing -->
+    <div class="flex flex-wrap justify-center gap-6 max-w-4xl mx-auto print:gap-4">
+        @foreach (var student in Model)
+        {
+            var qrCode = ViewBag.StudentQRCodes != null && ((IDictionary<int, string>)ViewBag.StudentQRCodes).ContainsKey(student.StudentId)
+                ? ViewBag.StudentQRCodes[student.StudentId]
+                : "";
+
+            <div class="qr-card w-56 bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col items-center text-center">
+                <!-- QR Image -->
+                @if (!string.IsNullOrEmpty(qrCode))
+                {
+                    <img src="@qrCode" class="w-28 h-28 object-contain" alt="QR @student.QRToken" />
+                }
+                else
+                {
+                    <div class="w-28 h-28 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 text-xs">لا يوجد QR</div>
+                }
+
+                <!-- Divider -->
+                <div class="w-full h-px bg-slate-100 my-3"></div>
+
+                <!-- Student Name -->
+                <p class="font-bold text-slate-800 text-sm leading-snug line-clamp-2">@student.FullName</p>
+
+                <!-- QR Number badge -->
+                <span class="mt-2 inline-block bg-indigo-50 text-indigo-700 font-black font-mono text-lg tracking-widest px-3 py-1 rounded-lg border border-indigo-100">
+                    @student.QRToken
+                </span>
+
+                <!-- Grade badge -->
+                @if (student.Grade != null)
+                {
+                    <span class="mt-1 text-xs text-slate-400 font-medium">@student.Grade.Name</span>
+                }
+            </div>
+        }
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center text-gray-400 mt-20 text-xl">لا يوجد طلاب.</div>
+    }
+
+</body>
+</html>

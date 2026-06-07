@@ -3,6 +3,7 @@ using Attendence_System.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace Attendence_System.Controllers
 {
@@ -12,15 +13,18 @@ namespace Attendence_System.Controllers
         private readonly IStudentService _studentService;
         private readonly IQRCodeService _qrCodeService;
         private readonly IGradeService _gradeService;
+        private readonly IImportService _importService;
 
         public StudentController(
             IStudentService studentService,
             IQRCodeService qrCodeService,
-            IGradeService gradeService)
+            IGradeService gradeService,
+            IImportService importService)
         {
             _studentService = studentService;
             _qrCodeService = qrCodeService;
             _gradeService = gradeService;
+            _importService = importService;
         }
 
         [HttpGet]
@@ -136,6 +140,92 @@ namespace Attendence_System.Controllers
                 return NotFound();
 
             return Ok();
+        }
+
+        // ─── Print All Cards ───────────────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> PrintAllCards()
+        {
+            var students = await _studentService.GetAllStudentsAsync();
+
+            ViewBag.StudentQRCodes = students.ToDictionary(
+                s => s.StudentId,
+                s => _qrCodeService.GenerateQRCode(s.QRToken)
+            );
+
+            return View(students);
+        }
+
+        // ─── Export QR Codes page ──────────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> ExportQRCodes()
+        {
+            var students = await _studentService.GetAllStudentsAsync();
+
+            ViewBag.StudentQRCodes = students.ToDictionary(
+                s => s.StudentId,
+                s => _qrCodeService.GenerateQRCode(s.QRToken)
+            );
+
+            return View(students);
+        }
+
+        // ─── Import from Excel ─────────────────────────────────────────────────
+
+
+        [HttpGet]
+        public async Task<IActionResult> ImportTemplate()
+        {
+            var grades = await _gradeService.GetAllGradesAsync();
+            var gradeNames = grades.Select(g => g.Name);
+            var fileBytes = _importService.GenerateStudentTemplate(gradeNames);
+            return File(fileBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "نموذج_استيراد_الطلاب.xlsx");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Import(IFormFile excelFile)
+        {
+            if (excelFile == null || excelFile.Length == 0)
+            {
+                TempData["ImportError"] = "يرجى اختيار ملف Excel أولاً.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var ext = Path.GetExtension(excelFile.FileName).ToLower();
+            if (ext != ".xlsx" && ext != ".xls")
+            {
+                TempData["ImportError"] = "صيغة الملف غير مدعومة. يرجى رفع ملف Excel (.xlsx)";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var tenantId = User.FindFirstValue("TenantId");
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                TempData["ImportError"] = "حدث خطأ في جلسة المستخدم. يرجى تسجيل الدخول مجدداً.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            try
+            {
+                var result = await _importService.ImportStudentsFromExcelAsync(excelFile, tenantId);
+                TempData["ImportAdded"] = result.AddedCount;
+                if (result.HasErrors)
+                    TempData["ImportErrors"] = JsonSerializer.Serialize(result.Errors);
+            }
+            catch (Exception ex)
+            {
+                var inner = ex.InnerException?.InnerException?.Message
+                          ?? ex.InnerException?.Message
+                          ?? ex.Message;
+                TempData["ImportError"] = $"خطأ: {ex.GetType().Name} — {inner}";
+            }
+
+            return RedirectToAction(nameof(Index));
         }
     }
 }

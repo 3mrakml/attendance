@@ -30,7 +30,6 @@ namespace Attendence_System.Services
             }
             else
             {
-                // TenantId is set by the caller (controller) via the model
                 _context.SystemSettings.Add(new SystemSetting { Key = key, Value = value });
             }
             await _context.SaveChangesAsync();
