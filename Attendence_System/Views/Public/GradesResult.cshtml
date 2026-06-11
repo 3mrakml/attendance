@@ -1,0 +1,186 @@
+@model Attendence_System.Models.Student
+@using Attendence_System.Models
+@{
+    Layout = null;
+    var studentExams = ViewBag.StudentExams as List<StudentExam> ?? new List<StudentExam>();
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>درجات @Model.FullName</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+            min-height: 100vh;
+            padding: 24px 16px;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+
+        /* Student Card */
+        .student-card {
+            background: white;
+            border-radius: 20px;
+            padding: 28px 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .avatar {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; flex-shrink: 0;
+        }
+        .student-info h2 { font-size: 1.3rem; font-weight: 900; color: #0f172a; }
+        .student-info .meta { font-size: 0.9rem; color: #64748b; margin-top: 4px; }
+        .badge {
+            display: inline-block;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border-radius: 8px;
+            padding: 3px 10px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+
+        /* Exams */
+        .section-title {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 900;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .exam-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .exam-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .exam-title { font-weight: 900; font-size: 1rem; color: #0f172a; }
+        .exam-meta { font-size: 0.8rem; color: #64748b; margin-top: 3px; }
+        .score-chip {
+            font-size: 1.2rem;
+            font-weight: 900;
+            padding: 6px 14px;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+        .score-pass { background: #dcfce7; color: #166534; }
+        .score-fail { background: #fef2f2; color: #991b1b; }
+        .score-none { background: #f1f5f9; color: #64748b; }
+
+        .progress-bar { height: 8px; background: #f1f5f9; border-radius: 99px; margin-top: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 99px; transition: width 0.6s; }
+        .fill-pass { background: linear-gradient(90deg, #22c55e, #16a34a); }
+        .fill-fail { background: linear-gradient(90deg, #f87171, #dc2626); }
+
+        .empty-state {
+            background: white;
+            border-radius: 16px;
+            padding: 40px 24px;
+            text-align: center;
+            color: #64748b;
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+        .back-btn {
+            display: block;
+            text-align: center;
+            margin-top: 24px;
+            color: rgba(255,255,255,0.6);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+        .back-btn:hover { color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Student Info Card -->
+        <div class="student-card">
+            <div class="avatar">🎓</div>
+            <div class="student-info">
+                <h2>@Model.FullName</h2>
+                <div class="meta">📋 كود: <strong dir="ltr">@Model.QRToken</strong></div>
+                @if (Model.Grade != null)
+                {
+                    <span class="badge">@Model.Grade.Name</span>
+                }
+            </div>
+        </div>
+
+        <!-- Exams -->
+        <div class="section-title">📊 نتائج الامتحانات (@studentExams.Count(se => se.Score.HasValue) / @studentExams.Count)</div>
+
+        @if (!studentExams.Any())
+        {
+            <div class="empty-state">
+                <div class="icon">📭</div>
+                <p>لا توجد امتحانات مسجلة بعد</p>
+            </div>
+        }
+        else
+        {
+            foreach (var se in studentExams)
+            {
+                var exam = se.Exam;
+                if (exam == null) continue;
+
+                bool hasScore = se.Score.HasValue;
+                double pct = hasScore && exam.MaxScore > 0 ? se.Score!.Value / exam.MaxScore * 100 : 0;
+                bool passed = pct >= 50;
+                string chipClass = !hasScore ? "score-none" : (passed ? "score-pass" : "score-fail");
+                string fillClass = passed ? "fill-pass" : "fill-fail";
+
+                <div class="exam-card">
+                    <div class="exam-header">
+                        <div>
+                            <div class="exam-title">@exam.Title</div>
+                            <div class="exam-meta">
+                                @if (exam.Course != null) { <text>📚 @exam.Course.Name &nbsp;</text> }
+                                else { <text>📚 امتحان شامل &nbsp;</text> }
+                                📅 @exam.Date.ToString("yyyy-MM-dd")
+                            </div>
+                        </div>
+                        <div class="score-chip @chipClass">
+                            @if (!hasScore)
+                            { <text>—</text> }
+                            else
+                            { <text>@se.Score / @exam.MaxScore</text> }
+                        </div>
+                    </div>
+                    @if (hasScore && exam.MaxScore > 0)
+                    {
+                        <div class="progress-bar">
+                            <div class="progress-fill @fillClass" style="width:@Math.Round(pct, 0)%"></div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+
+        <a href="javascript:history.back()" class="back-btn">← الرجوع للاستعلام</a>
+    </div>
+</body>
+</html>

@@ -13,7 +13,14 @@
             <div class="flex flex-wrap gap-3 mt-2 text-sm text-slate-500 font-medium">
                 <span class="flex items-center gap-1.5">
                     <i data-lucide="book-open" class="w-4 h-4 text-indigo-500"></i>
-                    <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-xs">@exam?.Course?.Name</span>
+                    @if (exam?.Course != null)
+                    {
+                        <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-xs">@exam.Course.Name</span>
+                    }
+                    else
+                    {
+                        <span class="px-2 py-0.5 rounded-full bg-fuchsia-100 text-fuchsia-800 font-bold text-xs">امتحان شامل</span>
+                    }
                 </span>
                 <span class="flex items-center gap-1.5">
                     <i data-lucide="graduation-cap" class="w-4 h-4 text-amber-500"></i>

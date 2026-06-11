@@ -131,7 +131,10 @@ namespace Attendence_System.Controllers
                 { "محاضرات الحضور", s => s.AttendedLectures },
                 { "محاضرات الغياب", s => s.AbsentLectures },
                 { "نسبة الحضور (%)", s => s.AttendancePercentage },
-                { "الدرجة المستحقة", s => s.CalculatedScore }
+                { "درجة الحضور", s => s.CalculatedScore },
+                { "درجات الامتحانات", s => s.ExamTotalScore },
+                { "إجمالي درجات الامتحانات من", s => s.ExamMaxScore },
+                { "الدرجة الكلية", s => s.TotalGrade }
             };
 
             var fileBytes = _excelService.ExportToExcel(studentsReport, "ComprehensiveReport", columns);
@@ -139,6 +142,44 @@ namespace Attendence_System.Controllers
             string fileName = gradeId.HasValue
                 ? $"Report_Grade_{gradeId.Value}_{DateTime.Now:yyyyMMdd}.xlsx"
                 : $"ComprehensiveReport_{DateTime.Now:yyyyMMdd}.xlsx";
+
+            return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        // ─── Attendance-Only Report ────────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> Attendance(int? gradeId)
+        {
+            var studentsReport = await _studentService.GetComprehensiveReportAsync(gradeId);
+            var grades = await _gradeService.GetAllGradesAsync();
+
+            ViewBag.Grades = grades;
+            ViewBag.SelectedGradeId = gradeId;
+
+            return View(studentsReport);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportAttendanceExcel(int? gradeId)
+        {
+            var studentsReport = await _studentService.GetComprehensiveReportAsync(gradeId);
+
+            var columns = new Dictionary<string, Func<StudentReportItem, object>>
+            {
+                { "الاسم بالكامل", s => s.FullName },
+                { "رقم التليفون", s => s.PhoneNumber ?? "-" },
+                { "الصف/الفرقة", s => s.GradeName },
+                { "إجمالي المحاضرات", s => s.TotalLectures },
+                { "محاضرات الحضور", s => s.AttendedLectures },
+                { "محاضرات الغياب", s => s.AbsentLectures },
+                { "نسبة الحضور (%)", s => s.AttendancePercentage }
+            };
+
+            var fileBytes = _excelService.ExportToExcel(studentsReport, "Attendance", columns);
+            string fileName = gradeId.HasValue
+                ? $"Attendance_Grade_{gradeId.Value}_{DateTime.Now:yyyyMMdd}.xlsx"
+                : $"AttendanceReport_{DateTime.Now:yyyyMMdd}.xlsx";
 
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }

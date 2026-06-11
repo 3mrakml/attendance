@@ -41,7 +41,7 @@ namespace Attendence_System.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(string title, DateOnly date, double maxScore, int courseId, int gradeId)
+        public async Task<IActionResult> Create(string title, DateOnly date, double maxScore, int? courseId, int gradeId)
         {
             var tenantId = User.FindFirstValue("TenantId");
             if (string.IsNullOrEmpty(tenantId))

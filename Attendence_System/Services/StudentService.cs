@@ -270,11 +270,28 @@ namespace Attendence_System.Services
                 .ToDictionaryAsync(x => x.GradeId, x => x.Count);
 
             var studentIds = students.Select(s => s.StudentId).ToList();
+
             var attendancePerStudent = await _context.StudentLectures
                 .Where(sl => studentIds.Contains(sl.StudentId))
                 .GroupBy(sl => sl.StudentId)
                 .Select(g => new { StudentId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.StudentId, x => x.Count);
+
+            // ─── Exam scores per student ──────────────────────────────────
+            // For each student: sum their exam scores (only graded)
+            var examScores = await _context.StudentExams
+                .Where(se => studentIds.Contains(se.StudentId) && se.Score.HasValue)
+                .GroupBy(se => se.StudentId)
+                .Select(g => new { StudentId = g.Key, TotalScore = g.Sum(se => se.Score!.Value) })
+                .ToDictionaryAsync(x => x.StudentId, x => x.TotalScore);
+
+            // For each grade: sum MaxScore of all exams (to know the total possible)
+            var gradeIds = students.Select(s => s.GradeId).Distinct().ToList();
+            var examMaxPerGrade = await _context.Exams
+                .Where(e => gradeIds.Contains(e.GradeId))
+                .GroupBy(e => e.GradeId)
+                .Select(g => new { GradeId = g.Key, MaxTotal = g.Sum(e => e.MaxScore) })
+                .ToDictionaryAsync(x => x.GradeId, x => x.MaxTotal);
 
             var report = new List<StudentReportItem>();
 
@@ -284,6 +301,8 @@ namespace Attendence_System.Services
                 int attended = attendancePerStudent.ContainsKey(student.StudentId) ? attendancePerStudent[student.StudentId] : 0;
                 int absent = Math.Max(0, totalLectures - attended);
                 double percentage = totalLectures == 0 ? 0 : Math.Round(((double)attended / totalLectures) * 100, 1);
+                double examTotal = examScores.ContainsKey(student.StudentId) ? examScores[student.StudentId] : 0;
+                double examMax   = examMaxPerGrade.ContainsKey(student.GradeId) ? examMaxPerGrade[student.GradeId] : 0;
 
                 report.Add(new StudentReportItem
                 {
@@ -297,7 +316,9 @@ namespace Attendence_System.Services
                     AttendedLectures = attended,
                     AbsentLectures = absent,
                     AttendancePercentage = percentage,
-                    CalculatedScore = 0
+                    CalculatedScore = 0,   // set by controller after fetching grade marks
+                    ExamTotalScore = examTotal,
+                    ExamMaxScore = examMax
                 });
             }
 

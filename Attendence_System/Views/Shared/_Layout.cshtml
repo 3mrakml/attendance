@@ -76,12 +76,25 @@
                 </a>
             </li>
             <li>
-                <a href="@Url.Action("Index", "AdminForms")" class="flex items-center px-4 py-3 rounded-xl transition-all duration-300 text-slate-300 hover:bg-white/10 hover:text-white hover:-translate-x-1 font-semibold group">
-                    <div class="w-8 h-8 rounded-lg bg-white/10 text-slate-300 flex items-center justify-center ml-3 group-hover:bg-white/20 group-hover:text-white transition-colors">
-                        <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                <div class="relative">
+                    <button onclick="toggleFormsMenu(this)" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 text-slate-300 hover:bg-white/10 hover:text-white font-semibold group">
+                        <span class="flex items-center">
+                            <div class="w-8 h-8 rounded-lg bg-white/10 text-slate-300 flex items-center justify-center ml-3 group-hover:bg-white/20 group-hover:text-white transition-colors">
+                                <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                            </div>
+                            نماذج
+                        </span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 transition-transform forms-chevron"></i>
+                    </button>
+                    <div id="forms-submenu" class="hidden mt-1 mr-4 space-y-1 border-r-2 border-white/20 pr-2">
+                        <a href="@Url.Action("Index", "AdminForms")" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-white/10 hover:text-white transition-all text-sm font-semibold">
+                            <i data-lucide="user-plus" class="w-4 h-4"></i> نموذج التسجيل
+                        </a>
+                        <a href="@Url.Action("GradesQuery", "AdminForms")" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-white/10 hover:text-white transition-all text-sm font-semibold">
+                            <i data-lucide="search" class="w-4 h-4"></i> استعلام الدرجات
+                        </a>
                     </div>
-                    نماذج التسجيل
-                </a>
+                </div>
             </li>
             <li>
                 <a href="@Url.Action("Index", "Exam")" class="flex items-center px-4 py-3 rounded-xl transition-all duration-300 text-slate-300 hover:bg-white/10 hover:text-white hover:-translate-x-1 font-semibold group">
@@ -104,7 +117,10 @@
                     </button>
                     <div id="reports-submenu" class="hidden mt-1 mr-4 space-y-1 border-r-2 border-white/20 pr-2">
                         <a href="@Url.Action("Index", "Report")" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-white/10 hover:text-white transition-all text-sm font-semibold">
-                            <i data-lucide="pie-chart" class="w-4 h-4"></i> تقرير الحضور الشامل
+                            <i data-lucide="pie-chart" class="w-4 h-4"></i> التقرير الشامل
+                        </a>
+                        <a href="@Url.Action("Attendance", "Report")" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-white/10 hover:text-white transition-all text-sm font-semibold">
+                            <i data-lucide="calendar-check" class="w-4 h-4"></i> تقرير الحضور
                         </a>
                         <a href="@Url.Action("Results", "Exam")" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-white/10 hover:text-white transition-all text-sm font-semibold">
                             <i data-lucide="bar-chart-2" class="w-4 h-4"></i> نتائج الامتحانات
@@ -153,12 +169,25 @@
             chevron.classList.toggle('rotate-180');
         }
 
-        // Auto-open reports menu if current page is a report page
+        function toggleFormsMenu(btn) {
+            const submenu = document.getElementById('forms-submenu');
+            const chevron = btn.querySelector('.forms-chevron');
+            submenu.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        }
+
+        // Auto-open menus based on current page
         (function() {
             const path = window.location.pathname.toLowerCase();
             if (path.includes('/report') || (path.includes('/exam') && path.includes('/results'))) {
                 const submenu = document.getElementById('reports-submenu');
                 const chevron = document.querySelector('.reports-chevron');
+                if (submenu) submenu.classList.remove('hidden');
+                if (chevron) chevron.classList.add('rotate-180');
+            }
+            if (path.includes('/adminforms') || path.includes('/gradesquery')) {
+                const submenu = document.getElementById('forms-submenu');
+                const chevron = document.querySelector('.forms-chevron');
                 if (submenu) submenu.classList.remove('hidden');
                 if (chevron) chevron.classList.add('rotate-180');
             }

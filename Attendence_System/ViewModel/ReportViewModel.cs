@@ -28,6 +28,13 @@ namespace Attendence_System.ViewModel
         public int AttendedLectures { get; set; }
         public int AbsentLectures { get; set; }
         public double AttendancePercentage { get; set; }
+        /// <summary>Attendance score out of MaxMarks (configurable per grade)</summary>
         public double CalculatedScore { get; set; }
+        /// <summary>Sum of all exam scores for this student</summary>
+        public double ExamTotalScore { get; set; }
+        /// <summary>Sum of MaxScore across all exams for this student's grade</summary>
+        public double ExamMaxScore { get; set; }
+        /// <summary>Attendance score + exam total score</summary>
+        public double TotalGrade => Math.Round(CalculatedScore + ExamTotalScore, 2);
     }
 }

@@ -8,7 +8,7 @@ namespace Attendence_System.Models
         public double MaxScore { get; set; } = 100;
 
         // المادة الدراسية
-        public int CourseId { get; set; }
+        public int? CourseId { get; set; }
         public Course? Course { get; set; }
 
         // الصف الدراسي

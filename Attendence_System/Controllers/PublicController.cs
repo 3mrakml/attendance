@@ -172,5 +172,78 @@ namespace Attendence_System.Controllers
 
             return View(student);
         }
+
+        // ─── Grade Query (Public) ──────────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> Grades(string username)
+        {
+            if (string.IsNullOrEmpty(username)) return NotFound();
+            var user = await _userManager.FindByNameAsync(username);
+            if (user == null || user.TenantId == null) return NotFound();
+
+            var isOpenStr = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == user.TenantId && s.Key == "IsGradeQueryOpen")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync() ?? "false";
+
+            if (isOpenStr != "true")
+                return View("GradeQueryClosed");
+
+            ViewBag.TeacherUsername = username;
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Grades(string username, string query)
+        {
+            if (string.IsNullOrEmpty(username)) return NotFound();
+            var user = await _userManager.FindByNameAsync(username);
+            if (user == null || user.TenantId == null) return NotFound();
+
+            var isOpenStr = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == user.TenantId && s.Key == "IsGradeQueryOpen")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync() ?? "false";
+
+            if (isOpenStr != "true")
+                return View("GradeQueryClosed");
+
+            query = query?.Trim() ?? "";
+
+            // Find student by QR token or phone number (for this tenant only)
+            var student = await _context.Students
+                .IgnoreQueryFilters()
+                .Include(s => s.Grade)
+                .Where(s => s.TenantId == user.TenantId &&
+                            (s.QRToken == query || s.PhoneNumber == query))
+                .FirstOrDefaultAsync();
+
+            ViewBag.TeacherUsername = username;
+            ViewBag.Query = query;
+
+            if (student == null)
+            {
+                ViewBag.NotFound = true;
+                return View();
+            }
+
+            // Load exams and scores for this student
+            var studentExams = await _context.StudentExams
+                .IgnoreQueryFilters()
+                .Include(se => se.Exam)
+                    .ThenInclude(e => e!.Course)
+                .Include(se => se.Exam)
+                    .ThenInclude(e => e!.Grade)
+                .Where(se => se.StudentId == student.StudentId)
+                .OrderByDescending(se => se.Exam!.Date)
+                .ToListAsync();
+
+            ViewBag.StudentExams = studentExams;
+            return View("GradesResult", student);
+        }
     }
 }

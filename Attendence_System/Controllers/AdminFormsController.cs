@@ -28,21 +28,48 @@ namespace Attendence_System.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var user = await _userManager.GetUserAsync(User);
-            var username = user!.UserName;
+            var username = User.Identity?.Name;
 
             var isRegistrationOpenStr = await _settingService.GetSettingAsync("IsRegistrationOpen", "false");
             var registrationSuccessMessage = await _settingService.GetSettingAsync("RegistrationSuccessMessage", "تم التسجيل بنجاح! احتفظ بالباركود الخاص بك.");
             var whatsappGroupLink = await _settingService.GetSettingAsync("WhatsAppGroupLink", "");
             var ageReferenceDate = await _settingService.GetSettingAsync("AgeReferenceDate", "");
 
+            var isGradeQueryOpenStr = await _settingService.GetSettingAsync("IsGradeQueryOpen", "false");
+
             ViewBag.IsRegistrationOpen = isRegistrationOpenStr == "true";
+            ViewBag.IsGradeQueryOpen = isGradeQueryOpenStr == "true";
             ViewBag.RegistrationSuccessMessage = registrationSuccessMessage;
             ViewBag.WhatsAppGroupLink = whatsappGroupLink;
             ViewBag.AgeReferenceDate = ageReferenceDate;
             ViewBag.TeacherUsername = username;
 
             return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GradesQuery()
+        {
+            var username = User.Identity?.Name;
+
+            var isGradeQueryOpenStr = await _settingService.GetSettingAsync("IsGradeQueryOpen", "false");
+
+            ViewBag.IsGradeQueryOpen = isGradeQueryOpenStr == "true";
+            ViewBag.TeacherUsername = username;
+
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [ActionName("GradesQuery")]
+        public async Task<IActionResult> GradesQueryPost(bool isGradeQueryOpen)
+        {
+            var tenantId = User.FindFirstValue("TenantId");
+            await EnsureSettingWithTenant("IsGradeQueryOpen", isGradeQueryOpen ? "true" : "false", tenantId!);
+
+            TempData["SuccessMessage"] = "تم تحديث إعدادات استعلام الدرجات.";
+            return RedirectToAction(nameof(GradesQuery));
         }
 
         [HttpPost]

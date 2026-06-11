@@ -8,12 +8,11 @@
     <meta charset="utf-8" />
     <title>طباعة ملصق - @Model.FullName</title>
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            margin: 0;
-            padding: 0;
-            background-color: white;
+            background: white;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             width: 100vw;
@@ -22,71 +21,96 @@
             font-family: Arial, sans-serif;
         }
 
+        .card {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 5vw;
+            width: 95vw;
+            height: 90vh;
+        }
+
+        /* ─── Code side (QR or Barcode) ─── */
+        .code-side {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
         .qr-image {
-            /* Make the QR code take up the maximum remaining space */
-            max-width: 95vw;
-            max-height: 70vh;
+            width: 90vw;
+            height: 90vw;
+            max-width: 85vh;
+            max-height: 85vh;
             object-fit: contain;
-            margin-bottom: -2vh;
         }
 
         .barcode-image {
-            width: 95vw;
-            height: 25vh; /* Enough height for barcode bars, but leaves room for large text */
+            width: 45vw;
+            height: 30vh;
             object-fit: contain;
-            margin-bottom: 2vh;
-            margin-top: 2vh;
         }
 
-        .qr-text {
-            font-size: 6vw;
-            font-weight: bold;
-            margin-top: 0;
-            text-align: center;
-            color: #000;
+        /* ─── Info side ─── */
+        .info-side {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 1.5vh;
+            transform: rotate(-90deg);
+            transform-origin: center center;
+            /* compensate so rotated block doesn't overflow */
+            white-space: nowrap;
         }
-        
+
         .qr-name {
-            font-size: 5vw;
-            font-weight: 800;
-            text-align: center;
-            margin-top: 0;
+            font-size: clamp(12px, 5vw, 52px);
+            font-weight: 500;
             color: #000;
-        }
-        
-        .qr-grade {
-            font-size: 4vw;
-            text-align: center;
-            color: #333;
-            margin-top: 0.5vh;
+            line-height: 1.2;
         }
 
-        /* 
-           This CSS rule resets margins during printing so Chrome doesn't 
-           try to add default headers, footers, or margins. 
-        */
+        .qr-token {
+            font-size: clamp(12px, 4vw, 40px);
+            font-weight: 600;
+            color: #000;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.1em;
+            direction: ltr;
+            text-align: right;
+        }
+
+        .qr-grade {
+            font-size: clamp(10px, 3vw, 32px);
+            color: #000;
+            font-weight: 500;
+        }
+
         @@media print {
-            @@page {
-                margin: 0;
-            }
-            body {
-                margin: 0;
-                padding: 0;
-            }
+            @@page { margin: 0; size: landscape; }
+            body { margin: 0; padding: 0; }
         }
     </style>
 </head>
 <body onload="window.print(); window.onafterprint = function() { window.close(); }">
-    @if (ViewBag.CodeType == "Barcode")
-    {
-        <img src="@ViewBag.QRCode" class="barcode-image" alt="Barcode" />
-    }
-    else
-    {
-        <img src="@ViewBag.QRCode" class="qr-image" alt="QR Code" />
-    }
-    <div class="qr-name">@Model.FullName</div>
-    <div class="qr-text">@Model.QRToken</div>
-    <div class="qr-grade">@Model.Grade?.Name</div>
+    <div class="card">
+        <div class="code-side">
+            @if (ViewBag.CodeType == "Barcode")
+            {
+                <img src="@ViewBag.QRCode" class="barcode-image" alt="Barcode" />
+            }
+            else
+            {
+                <img src="@ViewBag.QRCode" class="qr-image" alt="QR Code" />
+            }
+        </div>
+        <div class="info-side">
+            <div class="qr-name">@Model.FullName</div>
+            <div class="qr-token">@Model.QRToken</div>
+            <div class="qr-grade">@Model.Grade?.Name</div>
+        </div>
+    </div>
 </body>
 </html>

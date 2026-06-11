@@ -1,0 +1,67 @@
+@{
+    ViewData["Title"] = "إعدادات استعلام الدرجات";
+}
+
+<div class="max-w-3xl mx-auto space-y-8">
+    <div class="text-center">
+        <h2 class="text-3xl font-extrabold text-slate-800">استعلام الدرجات</h2>
+        <p class="text-slate-500 mt-2">أرسل الرابط للطلاب حتى يستعلموا عن درجاتهم بكود QR أو رقم التليفون.</p>
+    </div>
+
+    <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+        <form asp-action="GradesQuery" method="post" class="space-y-6">
+            @Html.AntiForgeryToken()
+
+            <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">حالة نموذج الاستعلام</h3>
+                        <p class="text-sm text-slate-500 mt-1">إذا تم إيقاف الاستعلام، فلن يتمكن أي طالب من الوصول إليه حتى لو كان يمتلك الرابط.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="isGradeQueryOpen" value="true" class="sr-only peer" @(ViewBag.IsGradeQueryOpen ? "checked" : "")>
+                        <div class="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-7 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100">
+                <button type="submit" class="w-full btn btn-primary flex items-center justify-center gap-2">
+                    <i data-lucide="save" class="w-5 h-5"></i> حفظ الإعدادات
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="bg-blue-50/50 p-6 rounded-2xl border border-blue-100">
+        <h3 class="font-bold text-blue-900 mb-2 flex items-center gap-2">
+            <i data-lucide="link" class="w-5 h-5 text-blue-500"></i>
+            رابط الاستعلام للطلاب
+        </h3>
+        <div class="flex items-center gap-3">
+            <input type="text" readonly value="@Url.Action("Grades", "Public", new { username = ViewBag.TeacherUsername }, Context.Request.Scheme)" class="flex-grow p-3 rounded-xl border border-blue-200 bg-white text-slate-600 font-mono text-sm" id="gradesLink" />
+            <button type="button" onclick="copyGradesLink()" class="btn bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 whitespace-nowrap">
+                <i data-lucide="copy" class="w-4 h-4 inline-block ml-1"></i> نسخ الرابط
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function copyGradesLink() {
+            var el = document.getElementById("gradesLink");
+            el.select();
+            el.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(el.value).then(() => {
+                Swal.fire({
+                    toast: true, position: 'top', icon: 'success',
+                    title: 'تم نسخ الرابط بنجاح!',
+                    showConfirmButton: false, timer: 2000, timerProgressBar: true,
+                    background: '#f8fafc', color: '#334155', iconColor: '#10b981'
+                });
+            });
+        }
+    </script>
+}

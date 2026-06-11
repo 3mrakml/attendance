@@ -112,9 +112,18 @@
         <!-- Exam Info + Search + Export -->
         <div class="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
             <div class="flex flex-wrap gap-3 text-sm font-semibold items-center">
-                <span class="px-3 py-1.5 rounded-xl bg-indigo-100 text-indigo-800">
-                    <i data-lucide="book-open" class="w-3.5 h-3.5 inline ml-1"></i>@selectedExam.Course?.Name
-                </span>
+                @if (selectedExam.Course != null)
+                {
+                    <span class="px-3 py-1.5 rounded-xl bg-indigo-100 text-indigo-800">
+                        <i data-lucide="book-open" class="w-3.5 h-3.5 inline ml-1"></i>@selectedExam.Course.Name
+                    </span>
+                }
+                else
+                {
+                    <span class="px-3 py-1.5 rounded-xl bg-fuchsia-100 text-fuchsia-800">
+                        <i data-lucide="book-open" class="w-3.5 h-3.5 inline ml-1"></i>امتحان شامل
+                    </span>
+                }
                 <span class="px-3 py-1.5 rounded-xl bg-amber-100 text-amber-800">
                     <i data-lucide="graduation-cap" class="w-3.5 h-3.5 inline ml-1"></i>@selectedExam.Grade?.Name
                 </span>
