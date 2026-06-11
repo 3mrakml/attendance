@@ -9,7 +9,12 @@ namespace Attendence_System.Models
 
         [MaxLength(450)]
         public string QRToken { get; set; } = string.Empty;
+
+        /// <summary>السن المُدخل يدوياً (قديم - محفوظ للتوافق مع البيانات القديمة)</summary>
         public int Age { get; set; }
+
+        /// <summary>تاريخ الميلاد - يُستخدم لحساب السن الديناميكي</summary>
+        public DateOnly? DateOfBirth { get; set; }
 
         [MaxLength(20)]
         public string? PhoneNumber { get; set; }
@@ -22,5 +27,15 @@ namespace Attendence_System.Models
 
         public int GradeId { get; set; }
         public Grade? Grade { get; set; }
+
+        /// <summary>يحسب السن بناءً على تاريخ الميلاد حتى تاريخ مُحدد، أو يرجع Age اليدوي لو مفيش تاريخ ميلاد</summary>
+        public int CalculateAge(DateOnly referenceDate)
+        {
+            if (!DateOfBirth.HasValue) return Age;
+            var dob = DateOfBirth.Value;
+            int years = referenceDate.Year - dob.Year;
+            if (referenceDate < dob.AddYears(years)) years--;
+            return years;
+        }
     }
 }

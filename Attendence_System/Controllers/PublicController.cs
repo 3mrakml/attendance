@@ -100,12 +100,36 @@ namespace Attendence_System.Controllers
                     return RedirectToAction("RegistrationSuccess", new { username, id = existingStudent.StudentId });
             }
 
-            // Generate unique 4-digit QRToken for this tenant
-            string token;
-            do { token = System.Random.Shared.Next(1000, 10000).ToString(); }
-            while (await _context.Students
+            // Generate Sequential QRToken for this tenant based on GradeId
+            string prefix = model.GradeId.ToString();
+            int expectedLength = prefix.Length + 3;
+            
+            var existingTokens = await _context.Students
                 .IgnoreQueryFilters()
-                .AnyAsync(s => s.QRToken == token && s.TenantId == user.TenantId));
+                .Where(s => s.TenantId == user.TenantId && s.GradeId == model.GradeId && s.QRToken.StartsWith(prefix) && s.QRToken.Length == expectedLength)
+                .Select(s => s.QRToken)
+                .ToListAsync();
+                
+            int maxSeq = 0;
+            foreach (var t in existingTokens)
+            {
+                if (int.TryParse(t.Substring(prefix.Length), out int seq))
+                {
+                    if (seq > maxSeq) maxSeq = seq;
+                }
+            }
+            
+            int nextSeq = maxSeq;
+            string token;
+            while (true)
+            {
+                nextSeq++;
+                token = $"{model.GradeId}{nextSeq:D3}";
+                bool exists = await _context.Students
+                    .IgnoreQueryFilters()
+                    .AnyAsync(s => s.QRToken == token && s.TenantId == user.TenantId);
+                if (!exists) break;
+            }
 
             model.QRToken = token;
 

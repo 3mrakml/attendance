@@ -14,17 +14,20 @@ namespace Attendence_System.Controllers
         private readonly IQRCodeService _qrCodeService;
         private readonly IGradeService _gradeService;
         private readonly IImportService _importService;
+        private readonly ISystemSettingService _settingService;
 
         public StudentController(
             IStudentService studentService,
             IQRCodeService qrCodeService,
             IGradeService gradeService,
-            IImportService importService)
+            IImportService importService,
+            ISystemSettingService settingService)
         {
             _studentService = studentService;
             _qrCodeService = qrCodeService;
             _gradeService = gradeService;
             _importService = importService;
+            _settingService = settingService;
         }
 
         [HttpGet]
@@ -32,13 +35,17 @@ namespace Attendence_System.Controllers
         {
             var students = await _studentService.GetAllStudentsAsync();
 
+            var codeType = await _settingService.GetSettingAsync("CodeType", "QR");
+            ViewBag.CodeType = codeType;
+
             ViewBag.StudentQRCodes = students.ToDictionary(
                 s => s.StudentId,
-                s => _qrCodeService.GenerateQRCode(s.QRToken)
+                s => codeType == "Barcode" ? _qrCodeService.GenerateBarcode(s.QRToken) : _qrCodeService.GenerateQRCode(s.QRToken)
             );
 
             ViewBag.Grades = await _gradeService.GetAllGradesAsync();
             ViewBag.AttendancePercentages = await _studentService.GetStudentsAttendancePercentagesAsync();
+            ViewBag.AgeReferenceDate = await _settingService.GetSettingAsync("AgeReferenceDate", "");
 
             return View(students);
         }
@@ -63,10 +70,7 @@ namespace Attendence_System.Controllers
                 var tenantId = User.FindFirstValue("TenantId");
                 model.TenantId = tenantId!;
 
-                string token;
-                do { token = System.Random.Shared.Next(1000, 10000).ToString(); }
-                while (await _studentService.StudentExistsAsync(token));
-                model.QRToken = token;
+                model.QRToken = await _studentService.GenerateSequentialQRTokenAsync(model.GradeId);
 
                 await _studentService.CreateStudentAsync(model);
                 TempData["SuccessMessage"] = "تم إضافة الطالب بنجاح.";
@@ -149,9 +153,12 @@ namespace Attendence_System.Controllers
         {
             var students = await _studentService.GetAllStudentsAsync();
 
+            var codeType = await _settingService.GetSettingAsync("CodeType", "QR");
+            ViewBag.CodeType = codeType;
+
             ViewBag.StudentQRCodes = students.ToDictionary(
                 s => s.StudentId,
-                s => _qrCodeService.GenerateQRCode(s.QRToken)
+                s => codeType == "Barcode" ? _qrCodeService.GenerateBarcode(s.QRToken) : _qrCodeService.GenerateQRCode(s.QRToken)
             );
 
             return View(students);
@@ -164,12 +171,30 @@ namespace Attendence_System.Controllers
         {
             var students = await _studentService.GetAllStudentsAsync();
 
+            var codeType = await _settingService.GetSettingAsync("CodeType", "QR");
+            ViewBag.CodeType = codeType;
+
             ViewBag.StudentQRCodes = students.ToDictionary(
                 s => s.StudentId,
-                s => _qrCodeService.GenerateQRCode(s.QRToken)
+                s => codeType == "Barcode" ? _qrCodeService.GenerateBarcode(s.QRToken) : _qrCodeService.GenerateQRCode(s.QRToken)
             );
 
             return View(students);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PrintSingleQR(int id)
+        {
+            var student = await _studentService.GetStudentByIdAsync(id);
+            if (student == null)
+            {
+                return NotFound();
+            }
+
+            var codeType = await _settingService.GetSettingAsync("CodeType", "QR");
+            ViewBag.CodeType = codeType;
+            ViewBag.QRCode = codeType == "Barcode" ? _qrCodeService.GenerateBarcode(student.QRToken) : _qrCodeService.GenerateQRCode(student.QRToken);
+            return View(student);
         }
 
         // ─── Import from Excel ─────────────────────────────────────────────────

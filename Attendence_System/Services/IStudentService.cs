@@ -13,6 +13,7 @@ namespace Attendence_System.Services
         Task<Student> CreateStudentAsync(Student student);
         Task<bool> UpdateStudentAsync(Student student);
         Task<bool> DeleteStudentAsync(int id);
+        Task<string> GenerateSequentialQRTokenAsync(int gradeId);
 
         // Attendance logic
         Task<(bool Success, string Message)> RegisterAttendanceAsync(ScanRequestVM request);

@@ -34,10 +34,12 @@ namespace Attendence_System.Controllers
             var isRegistrationOpenStr = await _settingService.GetSettingAsync("IsRegistrationOpen", "false");
             var registrationSuccessMessage = await _settingService.GetSettingAsync("RegistrationSuccessMessage", "تم التسجيل بنجاح! احتفظ بالباركود الخاص بك.");
             var whatsappGroupLink = await _settingService.GetSettingAsync("WhatsAppGroupLink", "");
+            var ageReferenceDate = await _settingService.GetSettingAsync("AgeReferenceDate", "");
 
             ViewBag.IsRegistrationOpen = isRegistrationOpenStr == "true";
             ViewBag.RegistrationSuccessMessage = registrationSuccessMessage;
             ViewBag.WhatsAppGroupLink = whatsappGroupLink;
+            ViewBag.AgeReferenceDate = ageReferenceDate;
             ViewBag.TeacherUsername = username;
 
             return View();
@@ -45,14 +47,14 @@ namespace Attendence_System.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateSettings(bool isRegistrationOpen, string registrationSuccessMessage, string whatsappGroupLink)
+        public async Task<IActionResult> UpdateSettings(bool isRegistrationOpen, string registrationSuccessMessage, string whatsappGroupLink, string ageReferenceDate)
         {
             var tenantId = User.FindFirstValue("TenantId");
 
-            // Ensure settings exist with TenantId for new ones
             await EnsureSettingWithTenant("IsRegistrationOpen", isRegistrationOpen ? "true" : "false", tenantId!);
             await EnsureSettingWithTenant("RegistrationSuccessMessage", registrationSuccessMessage ?? "", tenantId!);
             await EnsureSettingWithTenant("WhatsAppGroupLink", whatsappGroupLink ?? "", tenantId!);
+            await EnsureSettingWithTenant("AgeReferenceDate", ageReferenceDate ?? "", tenantId!);
 
             TempData["SuccessMessage"] = "تم تحديث إعدادات الفورم بنجاح.";
             return RedirectToAction("Index");

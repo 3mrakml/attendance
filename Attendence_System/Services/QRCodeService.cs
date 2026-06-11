@@ -16,5 +16,20 @@ namespace Attendence_System.Services
             byte[] qrCodeBytes = qrCode.GetGraphic(20);
             return $"data:image/png;base64,{Convert.ToBase64String(qrCodeBytes)}";
         }
+
+        public string GenerateBarcode(string data)
+        {
+            if (string.IsNullOrEmpty(data)) return string.Empty;
+
+            try
+            {
+                var barcode = new NetBarcode.Barcode(data, NetBarcode.Type.Code128B, false);
+                return $"data:image/png;base64,{barcode.GetBase64Image()}";
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
     }
 }

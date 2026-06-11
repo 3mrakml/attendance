@@ -24,7 +24,9 @@ namespace Attendence_System.Services
 
         public async Task<Student?> GetStudentByIdAsync(int id)
         {
-            return await _context.Students.FirstOrDefaultAsync(s => s.StudentId == id);
+            return await _context.Students
+                .Include(s => s.Grade)
+                .FirstOrDefaultAsync(s => s.StudentId == id);
         }
 
         public async Task<Student?> GetStudentByIdCollegeAsync(string qrToken)
@@ -43,6 +45,40 @@ namespace Attendence_System.Services
             return await _context.Students.AnyAsync(s => s.QRToken == qrToken);
         }
 
+        public async Task<string> GenerateSequentialQRTokenAsync(int gradeId)
+        {
+            var grade = await _context.Grades.FindAsync(gradeId);
+            string prefix = grade?.Code > 0 ? grade.Code.ToString() : gradeId.ToString();
+            int expectedLength = prefix.Length + 3;
+            
+            var existingTokens = await _context.Students
+                .Where(s => s.GradeId == gradeId && s.QRToken.StartsWith(prefix) && s.QRToken.Length == expectedLength)
+                .Select(s => s.QRToken)
+                .ToListAsync();
+                
+            int maxSeq = 0;
+            foreach (var t in existingTokens)
+            {
+                if (int.TryParse(t.Substring(prefix.Length), out int seq))
+                {
+                    if (seq > maxSeq) maxSeq = seq;
+                }
+            }
+            
+            int nextSeq = maxSeq;
+            string newToken;
+            while (true)
+            {
+                nextSeq++;
+                newToken = $"{gradeId}{nextSeq:D3}";
+                if (!await _context.Students.AnyAsync(s => s.QRToken == newToken))
+                {
+                    break;
+                }
+            }
+            return newToken;
+        }
+
         public async Task<Student> CreateStudentAsync(Student student)
         {
             _context.Students.Add(student);
@@ -59,6 +95,7 @@ namespace Attendence_System.Services
             existingStudent.Age = student.Age;
             existingStudent.GradeId = student.GradeId;
             existingStudent.PhoneNumber = student.PhoneNumber;
+            existingStudent.DateOfBirth = student.DateOfBirth;
 
             await _context.SaveChangesAsync();
             return true;

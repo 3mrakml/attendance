@@ -4,16 +4,19 @@ using Attendence_System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Attendence_System.Migrations
+namespace Attendence_System.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611042932_AddDateOfBirthToStudent")]
+    partial class AddDateOfBirthToStudent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -147,15 +150,6 @@ namespace Attendence_System.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GradeId"));
-
-                    b.Property<int>("Code")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MaxAge")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MinAge")
-                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()

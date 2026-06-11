@@ -47,6 +47,47 @@ namespace Attendence_System.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(Grade grade)
+        {
+            ModelState.Remove("TenantId");
+            ModelState.Remove("Tenant");
+
+            if (ModelState.IsValid)
+            {
+                // Retrieve existing grade to preserve TenantId or other properties if needed
+                var existingGrade = await _gradeService.GetGradeByIdAsync(grade.GradeId);
+                if (existingGrade == null)
+                {
+                    TempData["ErrorMessage"] = "لم يتم العثور على الصف المطلوب.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                // Update properties
+                existingGrade.Name = grade.Name;
+                existingGrade.Code = grade.Code;
+                existingGrade.MinAge = grade.MinAge;
+                existingGrade.MaxAge = grade.MaxAge;
+
+                var result = await _gradeService.UpdateGradeAsync(existingGrade);
+                if (result)
+                {
+                    TempData["SuccessMessage"] = "تم تعديل الصف بنجاح.";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "حدث خطأ أثناء تعديل الصف.";
+                }
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "البيانات المدخلة غير صحيحة.";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
         [HttpDelete]
         public async Task<IActionResult> Delete(int id)
         {

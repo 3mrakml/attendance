@@ -4,6 +4,10 @@ namespace Attendence_System.Models
     {
         public int GradeId { get; set; }
         public string Name { get; set; } = string.Empty;
+        
+        public int Code { get; set; }
+        public int? MinAge { get; set; }
+        public int? MaxAge { get; set; }
 
         // Multi-tenancy
         public string TenantId { get; set; } = string.Empty;

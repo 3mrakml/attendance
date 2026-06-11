@@ -8,16 +8,19 @@ namespace Attendence_System.Services
     public class ImportService : IImportService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ISystemSettingService _settingService;
 
         // الأسماء المقبولة لكل عمود (عربي وإنجليزي)
         private static readonly string[] NameColumns = { "الاسم", "الاسم بالكامل", "الاسم الكامل", "name", "fullname", "full name" };
         private static readonly string[] PhoneColumns = { "الهاتف", "رقم الهاتف", "موبايل", "phone", "mobile", "phonenumber" };
         private static readonly string[] AgeColumns = { "السن", "العمر", "age" };
         private static readonly string[] GradeColumns = { "الصف", "الفرقة", "المستوى", "الصف/الفرقة", "grade", "class" };
+        private static readonly string[] DobColumns = { "تاريخ الميلاد", "ميلاد", "dob", "birthdate", "date of birth", "dateofbirth" };
 
-        public ImportService(ApplicationDbContext context)
+        public ImportService(ApplicationDbContext context, ISystemSettingService settingService)
         {
             _context = context;
+            _settingService = settingService;
         }
 
         public async Task<ImportStudentResult> ImportStudentsFromExcelAsync(IFormFile file, string tenantId)
@@ -31,6 +34,11 @@ namespace Attendence_System.Services
                 .Select(s => s.PhoneNumber!)
                 .ToListAsync()).ToHashSet();
 
+            var studentsToAdd = new List<Student>();
+            
+            // قاموس لتتبع التسلسل لكل صف دراسي
+            var gradeSequenceTracker = new Dictionary<int, int>();
+
             // نسخ الملف إلى MemoryStream لأن ClosedXML يحتاج Seek
             using var ms = new MemoryStream();
             await file.CopyToAsync(ms);
@@ -41,7 +49,7 @@ namespace Attendence_System.Services
 
             // قراءة رأس الجدول (الصف الأول)
             var headerRow = ws.Row(1);
-            int nameCol = -1, phoneCol = -1, ageCol = -1, gradeCol = -1;
+            int nameCol = -1, phoneCol = -1, ageCol = -1, gradeCol = -1, dobCol = -1;
 
             foreach (var cell in headerRow.CellsUsed())
             {
@@ -52,6 +60,7 @@ namespace Attendence_System.Services
                 else if (PhoneColumns.Contains(header)) phoneCol = col;
                 else if (AgeColumns.Contains(header)) ageCol = col;
                 else if (GradeColumns.Contains(header)) gradeCol = col;
+                else if (DobColumns.Contains(header)) dobCol = col;
             }
 
             // لو مفيش عمود اسم — نفترض العمود الأول هو الاسم
@@ -71,7 +80,6 @@ namespace Attendence_System.Services
                 }
             }
 
-            var studentsToAdd = new List<Student>();
             var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
 
             for (int row = 2; row <= lastRow; row++)
@@ -102,7 +110,32 @@ namespace Attendence_System.Services
 
                 // السن
                 int age = 0;
-                if (ageCol > 0)
+                DateOnly? dob = null;
+
+                // تاريخ الميلاد (أولوية على السن اليدوي)
+                if (dobCol > 0)
+                {
+                    var dobStr = GetCellString(ws.Cell(row, dobCol));
+                    if (!string.IsNullOrWhiteSpace(dobStr))
+                    {
+                        // ClosedXML بيرجع التاريخ أحياناً كـ DateTime string
+                        if (DateOnly.TryParse(dobStr, out DateOnly parsedDob))
+                        {
+                            dob = parsedDob;
+                            // احسب السن باستخدام التاريخ المرجعي العام من الإعدادات
+                            var refDateStr = await _settingService.GetSettingAsync("AgeReferenceDate", "");
+                            DateOnly refDate = string.IsNullOrEmpty(refDateStr) || !DateOnly.TryParse(refDateStr, out DateOnly parsedRef)
+                                ? DateOnly.FromDateTime(DateTime.Today)
+                                : parsedRef;
+                            int years = refDate.Year - dob.Value.Year;
+                            if (refDate < dob.Value.AddYears(years)) years--;
+                            age = years;
+                        }
+                    }
+                }
+
+                // لو مفيش تاريخ ميلاد، خذ السن اليدوي
+                if (dob == null && ageCol > 0)
                 {
                     var ageStr = GetCellString(ws.Cell(row, ageCol));
                     int.TryParse(ageStr, out age);
@@ -166,17 +199,15 @@ namespace Attendence_System.Services
                     continue;
                 }
 
-                // توليد QRToken فريد
-                string token;
-                do { token = Random.Shared.Next(1000, 10000).ToString(); }
-                while (studentsToAdd.Any(s => s.QRToken == token) ||
-                       await _context.Students.AnyAsync(s => s.QRToken == token));
+                // توليد QRToken فريد ومتسلسل حسب الصف
+                string token = await GenerateSequentialQRTokenAsync(gradeId, gradeSequenceTracker, studentsToAdd);
 
                 studentsToAdd.Add(new Student
                 {
                     FullName = name,
                     PhoneNumber = phone,
                     Age = age,
+                    DateOfBirth = dob,
                     GradeId = gradeId,
                     QRToken = token,
                     TenantId = tenantId
@@ -200,6 +231,9 @@ namespace Attendence_System.Services
         /// <summary>يقرأ قيمة الخلية بشكل آمن سواء كانت نص أو رقم أو تاريخ</summary>
         private static string GetCellString(IXLCell cell)
         {
+            if (cell == null || cell.IsEmpty())
+                return string.Empty;
+
             try
             {
                 return cell.CachedValue.ToString()?.Trim() ?? cell.GetString().Trim();
@@ -208,6 +242,47 @@ namespace Attendence_System.Services
             {
                 return cell.GetString().Trim();
             }
+        }
+
+        private async Task<string> GenerateSequentialQRTokenAsync(int gradeId, Dictionary<int, int> gradeSequenceTracker, List<Student> studentsToAdd)
+        {
+            var grade = await _context.Grades.FindAsync(gradeId);
+            string prefix = grade?.Code > 0 ? grade.Code.ToString() : gradeId.ToString();
+            int expectedLength = prefix.Length + 3;
+
+            if (!gradeSequenceTracker.ContainsKey(gradeId))
+            {
+                var existingTokens = await _context.Students
+                    .Where(s => s.GradeId == gradeId && s.QRToken.StartsWith(prefix) && s.QRToken.Length == expectedLength)
+                    .Select(s => s.QRToken)
+                    .ToListAsync();
+                    
+                int maxSeq = 0;
+                foreach (var t in existingTokens)
+                {
+                    if (int.TryParse(t.Substring(prefix.Length), out int seq))
+                    {
+                        if (seq > maxSeq) maxSeq = seq;
+                    }
+                }
+                gradeSequenceTracker[gradeId] = maxSeq;
+            }
+
+            string newToken;
+            while (true)
+            {
+                gradeSequenceTracker[gradeId]++;
+                int nextSeq = gradeSequenceTracker[gradeId];
+                newToken = $"{gradeId}{nextSeq:D3}";
+                
+                // التأكد من عدم التكرار (لتفادي أي مشاكل لو كان في رقم مسجل يدوياً بنفس الصيغة)
+                if (!studentsToAdd.Any(s => s.QRToken == newToken) && !await _context.Students.AnyAsync(s => s.QRToken == newToken))
+                {
+                    break;
+                }
+            }
+
+            return newToken;
         }
 
         /// <summary>توحيد النصوص العربية لتجاهل الفروقات في الهمزات والتاء المربوطة</summary>

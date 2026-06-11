@@ -103,7 +103,7 @@
                         <div class="w-full h-[2px] bg-[#34415b] opacity-30 mb-6"></div>
                         <div class="space-y-4 text-[#34415b] font-medium text-sm">
                             <div class="flex items-center gap-3">
-                                <div class="w-7 h-7 rounded-full bg-[#34415b] text-white flex items-center justify-center text-xs">QR</div>
+                                <div class="w-7 h-7 rounded-full bg-[#34415b] text-white flex items-center justify-center text-[10px] font-bold">كود</div>
                                 <span class="text-base">الرقم: <span class="font-bold font-mono tracking-widest bg-white/50 px-2 py-0.5 rounded">@student.QRToken</span></span>
                             </div>
                             @if (student.Age > 0)
@@ -120,11 +120,18 @@
                         </div>
                     </div>
 
-                    <!-- QR Code -->
+                    <!-- Code -->
                     @if (!string.IsNullOrEmpty(qrCode))
                     {
-                        <div class="bg-white p-4 rounded-2xl shadow-xl border-4 border-white">
-                            <img src="@qrCode" class="w-40 h-40 object-contain" alt="QR" />
+                        <div class="bg-white p-3 rounded-2xl shadow-xl border-4 border-white flex items-center justify-center">
+                            @if (ViewBag.CodeType == "Barcode")
+                            {
+                                <img src="@qrCode" class="w-56 h-20 object-contain" alt="Barcode" />
+                            }
+                            else
+                            {
+                                <img src="@qrCode" class="w-36 h-36 object-contain" alt="QR" />
+                            }
                         </div>
                     }
                 </div>

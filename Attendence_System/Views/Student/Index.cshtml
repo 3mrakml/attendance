@@ -109,7 +109,7 @@
                         <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الاسم بالكامل</th>
                         <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الفرقة/الصف</th>
                         <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">نسبة الحضور</th>
-                        <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">رقم QR</th>
+                        <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">كود الطالب</th>
                         <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">إجراءات</th>
                     </tr>
                 </thead>
@@ -167,6 +167,9 @@
                                                 <i data-lucide="download" class="w-4 h-4"></i>
                                             </a>
                                         }
+                                        <a href="@Url.Action("PrintSingleQR", "Student", new { id = item.StudentId })" target="_blank" class="action-btn action-btn-info" title="طباعة ملصق QR (حراري)">
+                                            <i data-lucide="printer" class="w-4 h-4"></i>
+                                        </a>
                                         <a href="@Url.Action("PrintCard", "Student", new { id = item.StudentId })" target="_blank" class="action-btn action-btn-info" title="طباعة البطاقة (ID)">
                                             <i data-lucide="id-card" class="w-4 h-4"></i>
                                         </a>
@@ -175,6 +178,7 @@
                                                 data-name="@item.FullName"
                                                 data-phone="@item.PhoneNumber"
                                                 data-age="@item.Age"
+                                                data-dob="@(item.DateOfBirth.HasValue ? item.DateOfBirth.Value.ToString("yyyy-MM-dd") : "")"
                                                 data-grade-id="@item.GradeId"
                                                 title="تعديل الطالب">
                                             <i data-lucide="pencil" class="w-4 h-4"></i>
@@ -230,8 +234,20 @@
                         <input type="text" id="EditPhoneNumber" name="PhoneNumber" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900" dir="ltr" />
                     </div>
                     <div>
-                        <label for="EditAge" class="block text-sm font-semibold text-slate-700 mb-2">السن</label>
-                        <input type="number" id="EditAge" name="Age" min="1" max="120" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 text-left" dir="ltr" required />
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">تاريخ الميلاد</label>
+                        <div class="flex gap-2" dir="ltr">
+                            <input type="number" id="EditDobDay" placeholder="DD" min="1" max="31" class="w-full px-3 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 text-center" />
+                            <span class="flex items-center text-slate-400">/</span>
+                            <input type="number" id="EditDobMonth" placeholder="MM" min="1" max="12" class="w-full px-3 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 text-center" />
+                            <span class="flex items-center text-slate-400">/</span>
+                            <input type="number" id="EditDobYear" placeholder="YYYY" min="1900" max="2100" class="w-full px-3 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 text-center" />
+                        </div>
+                        <input type="hidden" id="EditDateOfBirth" name="DateOfBirth" />
+                        <p id="EditDobError" class="text-xs text-red-500 mt-1 hidden">تاريخ غير صحيح. تأكد من توافق الأيام مع الشهر.</p>
+                    </div>
+                    <div>
+                        <label for="EditAge" class="block text-sm font-semibold text-slate-700 mb-2">السن (يدوي - اختياري)</label>
+                        <input type="number" id="EditAge" name="Age" min="0" max="120" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 text-left" dir="ltr" />
                     </div>
                     <div>
                         <label for="EditGradeId" class="block text-sm font-semibold text-slate-700 mb-2">الصف / الفرقة</label>
@@ -241,7 +257,7 @@
                             {
                                 foreach (var grade in ViewBag.Grades)
                                 {
-                                    <option value="@grade.GradeId">@grade.Name</option>
+                                    <option value="@grade.GradeId" data-minage="@grade.MinAge" data-maxage="@grade.MaxAge">@grade.Name</option>
                                 }
                             }
                         </select>
@@ -282,8 +298,20 @@
                         <input type="text" id="PhoneNumber" name="PhoneNumber" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900" dir="ltr" placeholder="01xxxxxxxxx" />
                     </div>
                     <div>
-                        <label for="Age" class="block text-sm font-semibold text-slate-700 mb-2">السن</label>
-                        <input type="number" id="Age" name="Age" min="1" max="120" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 text-left" dir="ltr" required placeholder="مثال: 20" />
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">تاريخ الميلاد</label>
+                        <div class="flex gap-2" dir="ltr">
+                            <input type="number" id="DobDay" placeholder="DD" min="1" max="31" class="w-full px-3 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 text-center" />
+                            <span class="flex items-center text-slate-400">/</span>
+                            <input type="number" id="DobMonth" placeholder="MM" min="1" max="12" class="w-full px-3 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 text-center" />
+                            <span class="flex items-center text-slate-400">/</span>
+                            <input type="number" id="DobYear" placeholder="YYYY" min="1900" max="2100" class="w-full px-3 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 text-center" />
+                        </div>
+                        <input type="hidden" id="DateOfBirth" name="DateOfBirth" />
+                        <p id="DobError" class="text-xs text-red-500 mt-1 hidden">تاريخ غير صحيح. تأكد من توافق الأيام مع الشهر.</p>
+                    </div>
+                    <div>
+                        <label for="Age" class="block text-sm font-semibold text-slate-700 mb-2">السن (يدوي - اختياري)</label>
+                        <input type="number" id="Age" name="Age" min="0" max="120" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 text-left" dir="ltr" placeholder="اتركه فارغاً لو هتدخل تاريخ ميلاد" />
                     </div>
                     <div>
                         <label for="GradeId" class="block text-sm font-semibold text-slate-700 mb-2">الصف / الفرقة</label>
@@ -293,7 +321,7 @@
                             {
                                 foreach (var grade in ViewBag.Grades)
                                 {
-                                    <option value="@grade.GradeId">@grade.Name</option>
+                                    <option value="@grade.GradeId" data-minage="@grade.MinAge" data-maxage="@grade.MaxAge">@grade.Name</option>
                                 }
                             }
                         </select>
@@ -371,10 +399,10 @@
                 var selectedGrade = $('#gradeFilter').val();
 
                 $('tbody tr.js-delete-parent').each(function() {
-                    // id in column 0, name in column 1, grade in column 2, qr in column 3
+                    // id in column 0, name in column 1, grade in column 2, attendance in column 3, qr in column 4
                     var rowText = $(this).find('td:eq(0)').text().toLowerCase() + " " + 
                                   $(this).find('td:eq(1)').text().toLowerCase() + " " +
-                                  $(this).find('td:eq(3)').text().toLowerCase();
+                                  $(this).find('td:eq(4)').text().toLowerCase();
                     var gradeText = $(this).find('td:eq(2)').text().trim();
                     
                     var matchesSearch = searchTerm === "" || rowText.indexOf(searchTerm) > -1;
@@ -406,6 +434,23 @@
                 $('#EditFullName').val(btn.attr('data-name'));
                 $('#EditPhoneNumber').val(btn.attr('data-phone'));
                 $('#EditAge').val(btn.attr('data-age'));
+                
+                var dobStr = btn.attr('data-dob');
+                $('#EditDateOfBirth').val(dobStr);
+                $('#EditDobError').addClass('hidden');
+                if (dobStr) {
+                    var parts = dobStr.split('-');
+                    if (parts.length === 3) {
+                        $('#EditDobYear').val(parts[0]);
+                        $('#EditDobMonth').val(parseInt(parts[1], 10));
+                        $('#EditDobDay').val(parseInt(parts[2], 10));
+                    }
+                } else {
+                    $('#EditDobYear').val('');
+                    $('#EditDobMonth').val('');
+                    $('#EditDobDay').val('');
+                }
+
                 $('#EditGradeId').val(btn.attr('data-grade-id'));
 
                 document.getElementById('editStudentModal').classList.remove('hidden');
@@ -416,6 +461,98 @@
                 var fileName = this.files[0] ? this.files[0].name : 'xlsx فقط';
                 $('#fileNameDisplay').text(fileName);
                 $('#importSubmitBtn').prop('disabled', this.files.length === 0);
+            });
+
+            // التاريخ المرجعي العام من إعدادات النظام
+            var globalRefDate = '@(ViewBag.AgeReferenceDate ?? "")';
+
+            function autoSelectGrade(ageVal, gradeId) {
+                if (ageVal === '' || isNaN(ageVal) || !gradeId) return;
+                var age = parseInt(ageVal);
+                var foundMatch = false;
+
+                $(gradeId + ' option').each(function() {
+                    if (!$(this).val()) return true; // تخطي الخيار الافتراضي "-- اختر الصف --"
+
+                    var minAttr = $(this).attr('data-minage');
+                    var maxAttr = $(this).attr('data-maxage');
+                    
+                    // إذا كان كلا الحدين فارغين، لا نختار هذا الصف تلقائياً لأن النطاق غير محدد
+                    if (!minAttr && !maxAttr) return true;
+
+                    var min = minAttr ? parseInt(minAttr) : 0;
+                    var max = maxAttr ? parseInt(maxAttr) : 1000;
+                    
+                    if (age >= min && age <= max) {
+                        $(gradeId).val($(this).val());
+                        foundMatch = true;
+                        return false; // إنهاء اللوب عند إيجاد تطابق
+                    }
+                });
+
+                // إذا لم نجد أي صف يطابق هذا السن الجديد، نقوم بتفريغ الاختيار
+                if (!foundMatch) {
+                    $(gradeId).val('');
+                }
+            }
+
+            function calcAndSetAge(dobId, ageId, gradeId) {
+                var dob = $(dobId).val();
+                if (!dob) return;
+                var refDate = (globalRefDate && globalRefDate.trim() !== '') ? new Date(globalRefDate) : new Date();
+                var birth = new Date(dob);
+                var age = refDate.getFullYear() - birth.getFullYear();
+                var m = refDate.getMonth() - birth.getMonth();
+                if (m < 0 || (m === 0 && refDate.getDate() < birth.getDate())) age--;
+                if (age >= 0 && age <= 120) {
+                    $(ageId).val(age).prop('readonly', true).addClass('bg-slate-50 text-slate-500 cursor-not-allowed');
+                    autoSelectGrade(age, gradeId);
+                }
+            }
+
+            function validateAndSetDob(prefix, hiddenId, errorId, ageId, gradeId) {
+                var d = $('#' + prefix + 'Day').val();
+                var m = $('#' + prefix + 'Month').val();
+                var y = $('#' + prefix + 'Year').val();
+                
+                $(errorId).addClass('hidden');
+                
+                if(d && m && y) {
+                    var dateObj = new Date(y, m - 1, d);
+                    // التحقق من أن التاريخ حقيقي (وليس مثل 31 فبراير)
+                    if(dateObj.getFullYear() == y && dateObj.getMonth() == m - 1 && dateObj.getDate() == d) {
+                        var formattedStr = y + '-' + m.toString().padStart(2, '0') + '-' + d.toString().padStart(2, '0');
+                        $(hiddenId).val(formattedStr);
+                        calcAndSetAge(hiddenId, ageId, gradeId);
+                        
+                        // إزالة خطأ الفورم إن وجد لتمكين الحفظ
+                        $(this).closest('form').find('button[type="submit"]').prop('disabled', false);
+                    } else {
+                        $(errorId).removeClass('hidden');
+                        $(hiddenId).val('');
+                        $(ageId).prop('readonly', false).removeClass('bg-slate-50 text-slate-500 cursor-not-allowed');
+                        $(this).closest('form').find('button[type="submit"]').prop('disabled', true);
+                    }
+                } else {
+                    $(hiddenId).val('');
+                    $(ageId).prop('readonly', false).removeClass('bg-slate-50 text-slate-500 cursor-not-allowed');
+                }
+            }
+
+            $('#DobDay, #DobMonth, #DobYear').on('change keyup', function() {
+                validateAndSetDob.call(this, 'Dob', '#DateOfBirth', '#DobError', '#Age', '#GradeId');
+            });
+
+            $('#EditDobDay, #EditDobMonth, #EditDobYear').on('change keyup', function() {
+                validateAndSetDob.call(this, 'EditDob', '#EditDateOfBirth', '#EditDobError', '#EditAge', '#EditGradeId');
+            });
+
+            $('#Age').on('change keyup', function() {
+                autoSelectGrade($(this).val(), '#GradeId');
+            });
+
+            $('#EditAge').on('change keyup', function() {
+                autoSelectGrade($(this).val(), '#EditGradeId');
             });
         });
     </script>
