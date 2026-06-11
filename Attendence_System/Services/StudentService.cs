@@ -113,41 +113,49 @@ namespace Attendence_System.Services
 
         public async Task<(bool Success, string Message)> RegisterAttendanceAsync(ScanRequestVM request)
         {
-            var lecture = await _context.Lectures
-                .Include(l => l.LectureGrades)
-                .FirstOrDefaultAsync(l => l.LectureId == request.LectureId);
+            var studentInfo = await _context.Students
+                .Where(s => s.QRToken == request.IdCollege)
+                .Select(s => new {
+                    s.StudentId,
+                    s.FullName,
+                    s.GradeId,
+                    IsAlreadyRegistered = _context.StudentLectures.Any(sl => sl.StudentId == s.StudentId && sl.LectureId == request.LectureId)
+                })
+                .FirstOrDefaultAsync();
 
-            if (lecture == null)
-                return (false, "Lecture not found.");
+            if (studentInfo == null)
+                return (false, $"الطالب ذو الرمز {request.IdCollege} غير موجود.");
 
-            if (lecture.IsAttendanceClosed)
-                return (false, "Attendance is closed for this lecture.");
+            if (studentInfo.IsAlreadyRegistered)
+                return (false, $"{studentInfo.FullName} سجّل حضوره بالفعل.");
 
-            var student = await GetStudentByIdCollegeAsync(request.IdCollege);
-            if (student == null)
-                return (false, $"Student with QR Token {request.IdCollege} not found.");
+            var lectureInfo = await _context.Lectures
+                .Where(l => l.LectureId == request.LectureId)
+                .Select(l => new { 
+                    l.IsAttendanceClosed, 
+                    GradeIds = l.LectureGrades.Select(lg => lg.GradeId).ToList() 
+                })
+                .FirstOrDefaultAsync();
 
-            // التحقق من أن الطالب ينتمي لأحد الصفوف المخصصة للمحاضرة
-            var lectureGradeIds = lecture.LectureGrades.Select(lg => lg.GradeId).ToHashSet();
-            if (!lectureGradeIds.Contains(student.GradeId))
-                return (false, $"الطالب ({student.FullName}) غير مسجل في أي من الصفوف المخصصة لهذه المحاضرة.");
+            if (lectureInfo == null)
+                return (false, "المحاضرة غير موجودة.");
 
-            bool isAlreadyRegistered = await _context.StudentLectures
-                .AnyAsync(sl => sl.StudentId == student.StudentId && sl.LectureId == lecture.LectureId);
+            if (lectureInfo.IsAttendanceClosed)
+                return (false, "الغياب مغلق لهذه المحاضرة.");
 
-            if (isAlreadyRegistered)
-                return (false, $"{student.FullName} سجّل حضوره بالفعل في هذه المحاضرة.");
+            if (!lectureInfo.GradeIds.Contains(studentInfo.GradeId))
+                return (false, $"الطالب ({studentInfo.FullName}) غير مسجل في صف هذه المحاضرة.");
 
             _context.StudentLectures.Add(new StudentLecture
             {
-                StudentId = student.StudentId,
-                LectureId = lecture.LectureId,
+                StudentId = studentInfo.StudentId,
+                LectureId = request.LectureId,
                 AttendedAt = DateTime.UtcNow
             });
 
             await _context.SaveChangesAsync();
 
-            return (true, $"{student.FullName} تم تسجيل حضوره بنجاح!");
+            return (true, $"{studentInfo.FullName} تم تسجيل حضوره بنجاح!");
         }
 
         public async Task<List<StudentWithCount>> GetCourseAttendanceStatsAsync(int courseId)

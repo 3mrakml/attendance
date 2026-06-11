@@ -1,0 +1,282 @@
+@model List<Attendence_System.Models.StudentExam>
+
+@{
+    ViewData["Title"] = "نتائج الامتحانات";
+    var selectedExam = ViewBag.SelectedExam as Attendence_System.Models.Exam;
+    int? selCourse = ViewBag.SelectedCourseId;
+    int? selGrade  = ViewBag.SelectedGradeId;
+    int? selExam   = ViewBag.SelectedExamId;
+    string search  = ViewBag.Search ?? "";
+    string sortCol = ViewBag.SortCol ?? "score";
+    bool sortAsc   = ViewBag.SortAsc ?? false;
+
+    // Stats (computed here so they are in scope for the whole view)
+    var scored    = Model.Where(se => se.Score.HasValue).ToList();
+    double avg      = scored.Any() ? Math.Round(scored.Average(se => se.Score!.Value), 1) : 0;
+    double highest  = scored.Any() ? scored.Max(se => se.Score!.Value) : 0;
+    double lowest   = scored.Any() ? scored.Min(se => se.Score!.Value) : 0;
+    int passCount   = selectedExam != null
+        ? scored.Count(se => selectedExam.MaxScore > 0 && (se.Score!.Value / selectedExam.MaxScore * 100) >= 50)
+        : 0;
+
+    // Helper: build sort URL toggling direction
+    string SortUrl(string col) {
+        bool newAsc = sortCol == col ? !sortAsc : false;
+        return Url.Action("Results", new {
+            courseId = selCourse, gradeId = selGrade, examId = selExam,
+            search, sortCol = col, sortAsc = newAsc
+        })!;
+    }
+    string SortIcon(string col) => sortCol == col ? (sortAsc ? "▲" : "▼") : "";
+}
+
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100">
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800">نتائج الامتحانات</h2>
+        <p class="text-slate-500 mt-1 text-sm">اختر المادة ثم المستوى ثم الامتحان لعرض نتائج الطلاب.</p>
+    </div>
+
+    <!-- Filter Bar: Course → Grade → Exam -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+        <form method="get" asp-action="Results" id="filterForm">
+            <input type="hidden" name="sortCol" value="@sortCol" />
+            <input type="hidden" name="sortAsc"  value="@sortAsc.ToString().ToLower()" />
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                <!-- المادة -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">
+                        <i data-lucide="book-open" class="w-4 h-4 inline-block ml-1 text-indigo-500"></i>المادة
+                    </label>
+                    <select name="courseId" onchange="this.form.gradeId.value=''; this.form.examId.value=''; this.form.submit()"
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-semibold text-slate-700">
+                        <option value="">-- كل المواد --</option>
+                        @if (ViewBag.Courses != null)
+                        {
+                            foreach (var c in ViewBag.Courses)
+                            {
+                                if (selCourse == c.CourseId)
+                                { <option value="@c.CourseId" selected>@c.Name</option> }
+                                else
+                                { <option value="@c.CourseId">@c.Name</option> }
+                            }
+                        }
+                    </select>
+                </div>
+                <!-- المستوى -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">
+                        <i data-lucide="graduation-cap" class="w-4 h-4 inline-block ml-1 text-amber-500"></i>المستوى
+                    </label>
+                    <select name="gradeId" onchange="this.form.examId.value=''; this.form.submit()"
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-semibold text-slate-700">
+                        <option value="">-- كل المستويات --</option>
+                        @if (ViewBag.Grades != null)
+                        {
+                            foreach (var g in ViewBag.Grades)
+                            {
+                                if (selGrade == g.GradeId)
+                                { <option value="@g.GradeId" selected>@g.Name</option> }
+                                else
+                                { <option value="@g.GradeId">@g.Name</option> }
+                            }
+                        }
+                    </select>
+                </div>
+                <!-- الامتحان -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">
+                        <i data-lucide="file-pen-line" class="w-4 h-4 inline-block ml-1 text-emerald-500"></i>الامتحان
+                    </label>
+                    <select name="examId" onchange="this.form.submit()"
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-semibold text-slate-700">
+                        <option value="">-- اختر الامتحان --</option>
+                        @if (ViewBag.Exams != null)
+                        {
+                            foreach (var e in ViewBag.Exams)
+                            {
+                                if (selExam == e.ExamId)
+                                { <option value="@e.ExamId" selected>@e.Title — @e.Course?.Name / @e.Grade?.Name (@e.Date.ToString("yyyy-MM-dd"))</option> }
+                                else
+                                { <option value="@e.ExamId">@e.Title — @e.Course?.Name / @e.Grade?.Name (@e.Date.ToString("yyyy-MM-dd"))</option> }
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    @if (selectedExam != null)
+    {
+        <!-- Exam Info + Search + Export -->
+        <div class="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <div class="flex flex-wrap gap-3 text-sm font-semibold items-center">
+                <span class="px-3 py-1.5 rounded-xl bg-indigo-100 text-indigo-800">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5 inline ml-1"></i>@selectedExam.Course?.Name
+                </span>
+                <span class="px-3 py-1.5 rounded-xl bg-amber-100 text-amber-800">
+                    <i data-lucide="graduation-cap" class="w-3.5 h-3.5 inline ml-1"></i>@selectedExam.Grade?.Name
+                </span>
+                <span class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700" dir="ltr">
+                    📅 @selectedExam.Date.ToString("yyyy-MM-dd")
+                </span>
+                <span class="px-3 py-1.5 rounded-xl bg-primary/10 text-primary font-bold">
+                    🏆 @selectedExam.MaxScore درجة
+                </span>
+            </div>
+            <div class="flex gap-2 items-center">
+                <!-- Search -->
+                <form method="get" asp-action="Results" class="flex gap-2">
+                    <input type="hidden" name="courseId" value="@selCourse" />
+                    <input type="hidden" name="gradeId"  value="@selGrade" />
+                    <input type="hidden" name="examId"   value="@selExam" />
+                    <input type="hidden" name="sortCol"  value="@sortCol" />
+                    <input type="hidden" name="sortAsc"  value="@sortAsc.ToString().ToLower()" />
+                    <div class="relative">
+                        <i data-lucide="search" class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                        <input type="text" name="search" value="@search" placeholder="بحث باسم الطالب..."
+                               class="pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm w-52" />
+                    </div>
+                    <button type="submit" class="btn btn-neutral text-sm py-2 px-4">بحث</button>
+                    @if (!string.IsNullOrEmpty(search))
+                    {
+                        <a href="@Url.Action("Results", new { courseId = selCourse, gradeId = selGrade, examId = selExam, sortCol, sortAsc })"
+                           class="btn btn-neutral text-sm py-2 px-3 text-rose-500">✕</a>
+                    }
+                </form>
+                <!-- Export Excel -->
+                <a href="@Url.Action("ExportExcel", new { examId = selExam })"
+                   class="btn btn-neutral text-sm py-2.5 px-4 flex items-center gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> تصدير Excel
+                </a>
+            </div>
+        </div>
+
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm text-center">
+                <p class="text-xs font-bold text-slate-400 mb-1">عدد الطلاب</p>
+                <p class="text-3xl font-black text-slate-800">@Model.Count</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm text-center">
+                <p class="text-xs font-bold text-slate-400 mb-1">المتوسط</p>
+                <p class="text-3xl font-black text-slate-800">@avg</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 border border-emerald-100 shadow-sm text-center">
+                <p class="text-xs font-bold text-emerald-500 mb-1">أعلى درجة</p>
+                <p class="text-3xl font-black text-emerald-700">@highest</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 border border-rose-100 shadow-sm text-center">
+                <p class="text-xs font-bold text-rose-500 mb-1">أدنى درجة</p>
+                <p class="text-3xl font-black text-rose-700">@lowest</p>
+            </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="text-lg font-bold text-slate-800">
+                    نتائج الطلاب
+                    @if (!string.IsNullOrEmpty(search))
+                    {
+                        <span class="text-sm font-normal text-slate-500 mr-2">— نتائج البحث عن "@search"</span>
+                    }
+                </h3>
+                <span class="text-sm text-slate-500 font-semibold">@passCount ناجح من @Model.Count</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-100">
+                    <thead class="bg-slate-50/30">
+                        <tr>
+                            <th class="px-6 py-4 text-right text-sm font-bold text-slate-500">#</th>
+                            <th class="px-6 py-4 text-right text-sm font-bold text-slate-500">
+                                <a href="@SortUrl("name")" class="flex items-center gap-1 hover:text-primary transition-colors">
+                                    اسم الطالب <span class="text-primary">@SortIcon("name")</span>
+                                </a>
+                            </th>
+                            <th class="px-6 py-4 text-center text-sm font-bold text-slate-500">
+                                <a href="@SortUrl("score")" class="flex items-center justify-center gap-1 hover:text-primary transition-colors">
+                                    الدرجة <span class="text-primary">@SortIcon("score")</span>
+                                </a>
+                            </th>
+                            <th class="px-6 py-4 text-center text-sm font-bold text-slate-500">النسبة</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold text-slate-500">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @{ int i = 1; }
+                        @foreach (var se in Model)
+                        {
+                            double? pct = se.Score.HasValue && selectedExam.MaxScore > 0
+                                ? Math.Round((se.Score.Value / selectedExam.MaxScore) * 100, 1)
+                                : (double?)null;
+                            bool passed = pct.HasValue && pct >= 50;
+
+                            <tr class="hover:bg-slate-50/80 transition-colors">
+                                <td class="px-6 py-3 text-sm text-slate-400">@(i++)</td>
+                                <td class="px-6 py-3 font-bold text-slate-800">@se.Student?.FullName</td>
+                                <td class="px-6 py-3 text-center font-black text-slate-900">
+                                    @(se.Score.HasValue ? se.Score.Value.ToString("0.#") : "-")
+                                    @if (se.Score.HasValue)
+                                    {
+                                        <span class="text-xs text-slate-400 font-normal"> / @selectedExam.MaxScore</span>
+                                    }
+                                </td>
+                                <td class="px-6 py-3 text-center">
+                                    @if (pct.HasValue)
+                                    {
+                                        <div class="flex items-center justify-center gap-2">
+                                            <div class="w-24 bg-slate-100 rounded-full h-2">
+                                                <div class="h-2 rounded-full @(passed ? "bg-emerald-500" : "bg-rose-400")"
+                                                     style="width: @(Math.Min(pct.Value, 100))%"></div>
+                                            </div>
+                                            <span class="text-sm font-bold @(passed ? "text-emerald-700" : "text-rose-700")">@pct%</span>
+                                        </div>
+                                    }
+                                    else { <span class="text-slate-300">-</span> }
+                                </td>
+                                <td class="px-6 py-3 text-center">
+                                    @if (!se.Score.HasValue)
+                                    {
+                                        <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500">لم تُدخل</span>
+                                    }
+                                    else if (passed)
+                                    {
+                                        <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">✓ ناجح</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700">✗ راسب</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="px-6 py-12 text-center text-slate-400">
+                                    <i data-lucide="search-x" class="w-10 h-10 mx-auto mb-3 text-slate-300"></i>
+                                    <p class="font-semibold">لا توجد نتائج مطابقة.</p>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-16 text-center">
+            <div class="flex flex-col items-center gap-4">
+                <div class="w-20 h-20 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                    <i data-lucide="bar-chart-2" class="w-10 h-10 text-indigo-400"></i>
+                </div>
+                <p class="text-xl font-bold text-slate-700">اختر المادة والمستوى والامتحان لعرض النتائج</p>
+                <p class="text-slate-400 text-sm">استخدم الفلاتر أعلاه لتحديد الامتحان المطلوب.</p>
+            </div>
+        </div>
+    }
+</div>

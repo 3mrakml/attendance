@@ -28,6 +28,8 @@ namespace Attendence_System.Data
         public DbSet<LectureGrade> LectureGrades { get; set; }
         public DbSet<SystemSetting> SystemSettings { get; set; }
         public DbSet<Tenant> Tenants { get; set; }
+        public DbSet<Exam> Exams { get; set; }
+        public DbSet<StudentExam> StudentExams { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -146,6 +148,44 @@ namespace Attendence_System.Data
                 .Property(sl => sl.AttendedAt)
                 .HasDefaultValueSql("GETUTCDATE()");
 
+            // ─── Exam → Course ────────────────────────────────────────────────
+            modelBuilder.Entity<Exam>()
+                .HasOne(e => e.Course)
+                .WithMany()
+                .HasForeignKey(e => e.CourseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ─── Exam → Grade ─────────────────────────────────────────────────
+            modelBuilder.Entity<Exam>()
+                .HasOne(e => e.Grade)
+                .WithMany()
+                .HasForeignKey(e => e.GradeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ─── Exam → Tenant ────────────────────────────────────────────────
+            modelBuilder.Entity<Exam>()
+                .HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ─── StudentExam ──────────────────────────────────────────────────
+            modelBuilder.Entity<StudentExam>()
+                .HasOne(se => se.Student)
+                .WithMany()
+                .HasForeignKey(se => se.StudentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<StudentExam>()
+                .HasOne(se => se.Exam)
+                .WithMany(e => e.StudentExams)
+                .HasForeignKey(se => se.ExamId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<StudentExam>()
+                .HasIndex(se => new { se.StudentId, se.ExamId })
+                .IsUnique();
+
             // ─── Identity Tables ──────────────────────────────────────────────
             modelBuilder.Entity<AppUser>().ToTable("Users", "security");
             modelBuilder.Entity<IdentityRole>().ToTable("Roles", "security");
@@ -179,6 +219,11 @@ namespace Attendence_System.Data
                     _httpContextAccessor.HttpContext == null ||
                     _httpContextAccessor.HttpContext.User == null ||
                     ss.TenantId == _currentTenantId);
+
+                modelBuilder.Entity<Exam>().HasQueryFilter(e =>
+                    _httpContextAccessor.HttpContext == null ||
+                    _httpContextAccessor.HttpContext.User == null ||
+                    e.TenantId == _currentTenantId);
             }
         }
     }
