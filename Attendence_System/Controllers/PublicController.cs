@@ -261,8 +261,25 @@ namespace Attendence_System.Controllers
             ViewBag.AllLectures = allGradeLectures;
             ViewBag.AttendedLectureIds = attendedLectureIds;
             
-            ViewBag.TotalLectures = allGradeLectures.Count;
-            ViewBag.AttendedLectures = attendedLectureIds.Count;
+            int totalLecturesCount = allGradeLectures.Count;
+            int attendedLecturesCount = attendedLectureIds.Count;
+            
+            ViewBag.TotalLectures = totalLecturesCount;
+            ViewBag.AttendedLectures = attendedLecturesCount;
+
+            string settingKey = $"Grade_{student.GradeId}_Marks";
+            string valStr = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == tenantId && s.Key == settingKey)
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync() ?? "10";
+
+            double attendanceMaxMarks = double.TryParse(valStr, out var parsed) ? parsed : 10;
+            double attendancePercentage = totalLecturesCount > 0 ? ((double)attendedLecturesCount / totalLecturesCount) * 100 : 0;
+            double attendanceScore = Math.Round((attendancePercentage / 100.0) * attendanceMaxMarks, 2);
+
+            ViewBag.AttendanceMaxMarks = attendanceMaxMarks;
+            ViewBag.AttendanceScore = attendanceScore;
 
             return View("GradesResult", student);
         }

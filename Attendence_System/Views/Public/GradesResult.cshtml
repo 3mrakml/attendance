@@ -15,8 +15,11 @@
     double totalExamMax = studentExams.Where(se => se.Score.HasValue && se.Exam != null).Sum(se => se.Exam!.MaxScore);
     double totalExamEarned = studentExams.Where(se => se.Score.HasValue).Sum(se => se.Score!.Value);
 
-    double grandTotalMax = totalExamMax + totalLectures;
-    double grandTotalEarned = totalExamEarned + attendedLectures;
+    double attendanceMaxMarks = ViewBag.AttendanceMaxMarks ?? 10.0;
+    double attendanceScore = ViewBag.AttendanceScore ?? 0.0;
+
+    double grandTotalMax = totalExamMax + attendanceMaxMarks;
+    double grandTotalEarned = totalExamEarned + attendanceScore;
 
     double overallPct = grandTotalMax > 0 ? (grandTotalEarned / grandTotalMax) * 100 : 0;
 }
@@ -68,9 +71,12 @@
             </div>
         </div>
         <div class="text-2xl font-black text-slate-800">
-            @attendedLectures <span class="text-sm text-slate-400">/ @totalLectures</span>
+            @attendanceScore <span class="text-sm text-slate-400">/ @attendanceMaxMarks</span>
         </div>
-        <div class="w-full bg-slate-100 rounded-full h-1.5 mt-3">
+        <div class="text-xs text-slate-500 font-semibold mt-1 mb-1">
+            (حضر @attendedLectures من @totalLectures محاضرات)
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2">
             <div class="bg-emerald-500 h-1.5 rounded-full" style="width: @(totalLectures > 0 ? (attendedLectures * 100 / totalLectures) : 0)%"></div>
         </div>
     </div>

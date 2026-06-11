@@ -10,9 +10,6 @@
             <p class="text-slate-500 mt-1">تتبع حضور وغياب الطلاب ودرجاتهم بشكل كامل.</p>
         </div>
         <div class="flex gap-3">
-            <button type="button" onclick="document.getElementById('settingsModal').classList.remove('hidden')" class="btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm">
-                <i data-lucide="settings" class="w-4 h-4 ml-2"></i> إعدادات الدرجات
-            </button>
             <a id="exportExcelBtn" href="@Url.Action("ExportExcel", "Report", new { gradeId = Model.SelectedGradeId })" class="btn bg-slate-800 hover:bg-slate-900 text-white shadow-md">
                 <i data-lucide="file-spreadsheet" class="w-4 h-4 ml-2"></i> تصدير Excel
             </a>
@@ -156,47 +153,6 @@
     </div>
 </div>
 
-<!-- Settings Modal -->
-<div id="settingsModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="settingsModalLabel" role="dialog" aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
-        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" aria-hidden="true" onclick="document.getElementById('settingsModal').classList.add('hidden')"></div>
-
-        <div class="relative bg-white rounded-2xl text-right overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full">
-            <div class="border-b border-slate-100 p-6 pb-4 flex justify-between items-center">
-                <h5 class="text-xl font-bold text-slate-800">إعدادات درجات الحضور</h5>
-                <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors" onclick="document.getElementById('settingsModal').classList.add('hidden')">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            
-            <form asp-action="UpdateMarks" asp-controller="Report" method="post">
-                @Html.AntiForgeryToken()
-                <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-                    <p class="text-sm text-slate-500 mb-4">حدد الدرجة النهائية للحضور لكل صف. سيقوم النظام بحساب درجة كل طالب بناءً على نسبة حضوره من هذه الدرجة النهائية.</p>
-                    
-                    @foreach(var setting in Model.GradeSettings)
-                    {
-                        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                            <span class="font-bold text-slate-700">@setting.GradeName</span>
-                            <div class="w-32 relative">
-                                <input type="number" step="0.5" min="0" name="marks[@setting.GradeId]" value="@setting.MaxMarks" class="w-full pl-4 pr-10 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-center font-bold" required />
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 text-sm font-bold">
-                                    درجة
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-                <div class="border-t border-slate-100 p-6 pt-4 flex gap-3">
-                    <button type="button" class="btn btn-neutral flex-1" onclick="document.getElementById('settingsModal').classList.add('hidden')">إلغاء</button>
-                    <button type="submit" class="btn btn-primary flex-1">
-                        <i data-lucide="save" class="w-4 h-4 ml-2"></i> حفظ الإعدادات
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 @section Scripts {
     <script>
