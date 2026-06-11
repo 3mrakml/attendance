@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Attendence_System.Controllers
 {
     [AllowAnonymous]
-    [Route("Public/{username}/[action]")]
+    [Route("Public/{tenantId}/[action]")]
     public class PublicController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -27,16 +27,16 @@ namespace Attendence_System.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Register(string username)
+        public async Task<IActionResult> Register(string tenantId)
         {
-            if (string.IsNullOrEmpty(username)) return NotFound("Username is required.");
-            var user = await _userManager.FindByNameAsync(username);
-            if (user == null || user.TenantId == null) return NotFound("Teacher not found.");
+            if (string.IsNullOrEmpty(tenantId)) return NotFound("Tenant ID is required.");
+            var tenantExists = await _context.Tenants.AnyAsync(t => t.Id == tenantId);
+            if (!tenantExists) return NotFound("Teacher not found.");
 
             // Load settings for this specific tenant (bypass global filter)
             var isRegistrationOpenStr = await _context.SystemSettings
                 .IgnoreQueryFilters()
-                .Where(s => s.TenantId == user.TenantId && s.Key == "IsRegistrationOpen")
+                .Where(s => s.TenantId == tenantId && s.Key == "IsRegistrationOpen")
                 .Select(s => s.Value)
                 .FirstOrDefaultAsync() ?? "false";
 
@@ -46,25 +46,25 @@ namespace Attendence_System.Controllers
             // Load grades for this specific tenant (bypass global filter)
             var grades = await _context.Grades
                 .IgnoreQueryFilters()
-                .Where(g => g.TenantId == user.TenantId)
+                .Where(g => g.TenantId == tenantId)
                 .ToListAsync();
 
-            ViewBag.TeacherUsername = username;
+            ViewBag.TenantId = tenantId;
             ViewBag.Grades = grades;
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(string username, Student model)
+        public async Task<IActionResult> Register(string tenantId, Student model)
         {
-            if (string.IsNullOrEmpty(username)) return NotFound("Username is required.");
-            var user = await _userManager.FindByNameAsync(username);
-            if (user == null || user.TenantId == null) return NotFound("Teacher not found.");
+            if (string.IsNullOrEmpty(tenantId)) return NotFound("Tenant ID is required.");
+            var tenantExists = await _context.Tenants.AnyAsync(t => t.Id == tenantId);
+            if (!tenantExists) return NotFound("Teacher not found.");
 
             var isRegistrationOpenStr = await _context.SystemSettings
                 .IgnoreQueryFilters()
-                .Where(s => s.TenantId == user.TenantId && s.Key == "IsRegistrationOpen")
+                .Where(s => s.TenantId == tenantId && s.Key == "IsRegistrationOpen")
                 .Select(s => s.Value)
                 .FirstOrDefaultAsync() ?? "false";
 
@@ -79,25 +79,25 @@ namespace Attendence_System.Controllers
             {
                 var grades = await _context.Grades
                     .IgnoreQueryFilters()
-                    .Where(g => g.TenantId == user.TenantId)
+                    .Where(g => g.TenantId == tenantId)
                     .ToListAsync();
 
-                ViewBag.TeacherUsername = username;
+                ViewBag.TenantId = tenantId;
                 ViewBag.Grades = grades;
                 return View(model);
             }
 
-            model.TenantId = user.TenantId;
+            model.TenantId = tenantId;
 
             // Check if phone number already exists for this tenant
             if (!string.IsNullOrWhiteSpace(model.PhoneNumber))
             {
                 var existingStudent = await _context.Students
                     .IgnoreQueryFilters()
-                    .FirstOrDefaultAsync(s => s.PhoneNumber == model.PhoneNumber && s.TenantId == user.TenantId);
+                    .FirstOrDefaultAsync(s => s.PhoneNumber == model.PhoneNumber && s.TenantId == tenantId);
 
                 if (existingStudent != null)
-                    return RedirectToAction("RegistrationSuccess", new { username, id = existingStudent.StudentId });
+                    return RedirectToAction("RegistrationSuccess", new { tenantId, id = existingStudent.StudentId });
             }
 
             // Generate Sequential QRToken for this tenant based on GradeId
@@ -106,7 +106,7 @@ namespace Attendence_System.Controllers
             
             var existingTokens = await _context.Students
                 .IgnoreQueryFilters()
-                .Where(s => s.TenantId == user.TenantId && s.GradeId == model.GradeId && s.QRToken.StartsWith(prefix) && s.QRToken.Length == expectedLength)
+                .Where(s => s.TenantId == tenantId && s.GradeId == model.GradeId && s.QRToken.StartsWith(prefix) && s.QRToken.Length == expectedLength)
                 .Select(s => s.QRToken)
                 .ToListAsync();
                 
@@ -127,7 +127,7 @@ namespace Attendence_System.Controllers
                 token = $"{model.GradeId}{nextSeq:D3}";
                 bool exists = await _context.Students
                     .IgnoreQueryFilters()
-                    .AnyAsync(s => s.QRToken == token && s.TenantId == user.TenantId);
+                    .AnyAsync(s => s.QRToken == token && s.TenantId == tenantId);
                 if (!exists) break;
             }
 
@@ -136,33 +136,33 @@ namespace Attendence_System.Controllers
             _context.Students.Add(model);
             await _context.SaveChangesAsync();
 
-            return RedirectToAction("RegistrationSuccess", new { username, id = model.StudentId });
+            return RedirectToAction("RegistrationSuccess", new { tenantId, id = model.StudentId });
         }
 
         [HttpGet]
-        public async Task<IActionResult> RegistrationSuccess(string username, int id)
+        public async Task<IActionResult> RegistrationSuccess(string tenantId, int id)
         {
-            if (string.IsNullOrEmpty(username)) return NotFound();
-            var user = await _userManager.FindByNameAsync(username);
-            if (user == null || user.TenantId == null) return NotFound();
+            if (string.IsNullOrEmpty(tenantId)) return NotFound();
+            var tenantExists = await _context.Tenants.AnyAsync(t => t.Id == tenantId);
+            if (!tenantExists) return NotFound();
 
             var student = await _context.Students
                 .IgnoreQueryFilters()
                 .Include(s => s.Grade)
-                .FirstOrDefaultAsync(s => s.StudentId == id && s.TenantId == user.TenantId);
+                .FirstOrDefaultAsync(s => s.StudentId == id && s.TenantId == tenantId);
 
             if (student == null)
                 return NotFound();
 
             var successMessage = await _context.SystemSettings
                 .IgnoreQueryFilters()
-                .Where(s => s.TenantId == user.TenantId && s.Key == "RegistrationSuccessMessage")
+                .Where(s => s.TenantId == tenantId && s.Key == "RegistrationSuccessMessage")
                 .Select(s => s.Value)
                 .FirstOrDefaultAsync() ?? "تم التسجيل بنجاح! احتفظ بالباركود الخاص بك.";
 
             var whatsappGroupLink = await _context.SystemSettings
                 .IgnoreQueryFilters()
-                .Where(s => s.TenantId == user.TenantId && s.Key == "WhatsAppGroupLink")
+                .Where(s => s.TenantId == tenantId && s.Key == "WhatsAppGroupLink")
                 .Select(s => s.Value)
                 .FirstOrDefaultAsync() ?? "";
 
@@ -176,36 +176,36 @@ namespace Attendence_System.Controllers
         // ─── Grade Query (Public) ──────────────────────────────────────────────
 
         [HttpGet]
-        public async Task<IActionResult> Grades(string username)
+        public async Task<IActionResult> Grades(string tenantId)
         {
-            if (string.IsNullOrEmpty(username)) return NotFound();
-            var user = await _userManager.FindByNameAsync(username);
-            if (user == null || user.TenantId == null) return NotFound();
+            if (string.IsNullOrEmpty(tenantId)) return NotFound();
+            var tenantExists = await _context.Tenants.AnyAsync(t => t.Id == tenantId);
+            if (!tenantExists) return NotFound();
 
             var isOpenStr = await _context.SystemSettings
                 .IgnoreQueryFilters()
-                .Where(s => s.TenantId == user.TenantId && s.Key == "IsGradeQueryOpen")
+                .Where(s => s.TenantId == tenantId && s.Key == "IsGradeQueryOpen")
                 .Select(s => s.Value)
                 .FirstOrDefaultAsync() ?? "false";
 
             if (isOpenStr != "true")
                 return View("GradeQueryClosed");
 
-            ViewBag.TeacherUsername = username;
+            ViewBag.TenantId = tenantId;
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Grades(string username, string query)
+        public async Task<IActionResult> Grades(string tenantId, string query)
         {
-            if (string.IsNullOrEmpty(username)) return NotFound();
-            var user = await _userManager.FindByNameAsync(username);
-            if (user == null || user.TenantId == null) return NotFound();
+            if (string.IsNullOrEmpty(tenantId)) return NotFound();
+            var tenantExists = await _context.Tenants.AnyAsync(t => t.Id == tenantId);
+            if (!tenantExists) return NotFound();
 
             var isOpenStr = await _context.SystemSettings
                 .IgnoreQueryFilters()
-                .Where(s => s.TenantId == user.TenantId && s.Key == "IsGradeQueryOpen")
+                .Where(s => s.TenantId == tenantId && s.Key == "IsGradeQueryOpen")
                 .Select(s => s.Value)
                 .FirstOrDefaultAsync() ?? "false";
 
@@ -218,11 +218,11 @@ namespace Attendence_System.Controllers
             var student = await _context.Students
                 .IgnoreQueryFilters()
                 .Include(s => s.Grade)
-                .Where(s => s.TenantId == user.TenantId &&
+                .Where(s => s.TenantId == tenantId &&
                             (s.QRToken == query || s.PhoneNumber == query))
                 .FirstOrDefaultAsync();
 
-            ViewBag.TeacherUsername = username;
+            ViewBag.TenantId = tenantId;
             ViewBag.Query = query;
 
             if (student == null)
@@ -242,7 +242,28 @@ namespace Attendence_System.Controllers
                 .OrderByDescending(se => se.Exam!.Date)
                 .ToListAsync();
 
+            // Get all lectures for the student's grade
+            var allGradeLectures = await _context.Lectures
+                .IgnoreQueryFilters()
+                .Include(l => l.Course)
+                .Where(l => l.Course.TenantId == tenantId && l.LectureGrades.Any(lg => lg.GradeId == student.GradeId))
+                .OrderByDescending(l => l.DateTime)
+                .ToListAsync();
+
+            // Get the IDs of the lectures the student attended
+            var attendedLectureIds = await _context.StudentLectures
+                .IgnoreQueryFilters()
+                .Where(sl => sl.StudentId == student.StudentId)
+                .Select(sl => sl.LectureId)
+                .ToListAsync();
+
             ViewBag.StudentExams = studentExams;
+            ViewBag.AllLectures = allGradeLectures;
+            ViewBag.AttendedLectureIds = attendedLectureIds;
+            
+            ViewBag.TotalLectures = allGradeLectures.Count;
+            ViewBag.AttendedLectures = attendedLectureIds.Count;
+
             return View("GradesResult", student);
         }
     }

@@ -39,7 +39,7 @@
             رابط الاستعلام للطلاب
         </h3>
         <div class="flex items-center gap-3">
-            <input type="text" readonly value="@Url.Action("Grades", "Public", new { username = ViewBag.TeacherUsername }, Context.Request.Scheme)" class="flex-grow p-3 rounded-xl border border-blue-200 bg-white text-slate-600 font-mono text-sm" id="gradesLink" />
+            <input type="text" readonly value="@Url.Action("Grades", "Public", new { tenantId = ViewBag.TenantId }, Context.Request.Scheme)" class="flex-grow p-3 rounded-xl border border-blue-200 bg-white text-slate-600 font-mono text-sm" id="gradesLink" />
             <button type="button" onclick="copyGradesLink()" class="btn bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 whitespace-nowrap">
                 <i data-lucide="copy" class="w-4 h-4 inline-block ml-1"></i> نسخ الرابط
             </button>

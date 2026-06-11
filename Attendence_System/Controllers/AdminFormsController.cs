@@ -28,7 +28,7 @@ namespace Attendence_System.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var username = User.Identity?.Name;
+            var tenantId = User.FindFirstValue("TenantId");
 
             var isRegistrationOpenStr = await _settingService.GetSettingAsync("IsRegistrationOpen", "false");
             var registrationSuccessMessage = await _settingService.GetSettingAsync("RegistrationSuccessMessage", "تم التسجيل بنجاح! احتفظ بالباركود الخاص بك.");
@@ -42,7 +42,7 @@ namespace Attendence_System.Controllers
             ViewBag.RegistrationSuccessMessage = registrationSuccessMessage;
             ViewBag.WhatsAppGroupLink = whatsappGroupLink;
             ViewBag.AgeReferenceDate = ageReferenceDate;
-            ViewBag.TeacherUsername = username;
+            ViewBag.TenantId = tenantId;
 
             return View();
         }
@@ -50,12 +50,12 @@ namespace Attendence_System.Controllers
         [HttpGet]
         public async Task<IActionResult> GradesQuery()
         {
-            var username = User.Identity?.Name;
+            var tenantId = User.FindFirstValue("TenantId");
 
             var isGradeQueryOpenStr = await _settingService.GetSettingAsync("IsGradeQueryOpen", "false");
 
             ViewBag.IsGradeQueryOpen = isGradeQueryOpenStr == "true";
-            ViewBag.TeacherUsername = username;
+            ViewBag.TenantId = tenantId;
 
             return View();
         }
