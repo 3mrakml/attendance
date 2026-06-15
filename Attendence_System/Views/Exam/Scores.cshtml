@@ -41,13 +41,7 @@
         </a>
     </div>
 
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl p-4 flex items-center gap-3">
-            <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 flex-shrink-0"></i>
-            <span class="font-semibold">@TempData["SuccessMessage"]</span>
-        </div>
-    }
+
 
     <!-- Scores Table -->
     <form asp-action="SaveScores" method="post">

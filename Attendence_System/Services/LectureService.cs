@@ -69,6 +69,18 @@ namespace Attendence_System.Services
             return false;
         }
 
+        public async Task<Lecture?> UpdateLectureTitleAsync(int lectureId, string title)
+        {
+            var lecture = await _context.Lectures.FindAsync(lectureId);
+
+            if (lecture == null) return null;
+
+            lecture.Title = title;
+
+            await _context.SaveChangesAsync();
+            return lecture;
+        }
+
         public async Task<bool> DeleteLectureAsync(int lectureId)
         {
             var lecture = await _context.Lectures.FindAsync(lectureId);
@@ -86,6 +98,17 @@ namespace Attendence_System.Services
                 .Include(sl => sl.Student)
                 .Select(sl => sl.Student)
                 .ToListAsync();
+        }
+
+        public System.Linq.IQueryable<Lecture> GetAllLecturesQueryable()
+        {
+            return _context.Lectures
+                .AsNoTracking()
+                .Include(l => l.Course)
+                .Include(l => l.LectureGrades)
+                    .ThenInclude(lg => lg.Grade)
+                .OrderByDescending(l => l.DateTime)
+                .AsQueryable();
         }
     }
 }

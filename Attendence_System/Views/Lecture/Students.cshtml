@@ -129,15 +129,3 @@
     </div>
 </div>
 
-@section Scripts {
-    <script src="~/lib/xlsx/xlsx.full.min.js"></script>
-    <script src="~/lib/filesaver/FileSaver.min.js"></script>
-
-    <script>
-        function exportToExcel() {
-            var table = document.getElementById('studentsTable');
-            var wb = XLSX.utils.table_to_book(table, { sheet: "Attendance" });
-            XLSX.writeFile(wb, 'Lecture_Attendance_@(Model.LectureTitle).xlsx');
-        }
-    </script>
-}

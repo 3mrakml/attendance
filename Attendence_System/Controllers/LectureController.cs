@@ -34,6 +34,56 @@ namespace Attendence_System.Controllers
             _excelService = excelService;
         }
 
+        // ─── List Lectures (Index) ─────────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> Index(string search, int? gradeId, int page = 1)
+        {
+            ViewBag.CurrentSearch = search;
+            ViewBag.CurrentGradeId = gradeId;
+            ViewBag.Grades = await _gradeService.GetAllGradesAsync();
+
+            int pageSize = 20;
+
+            var query = _lectureService.GetAllLecturesQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(l => l.Title.Contains(search) || (l.Course != null && l.Course.Name.Contains(search)));
+            }
+
+            if (gradeId.HasValue)
+            {
+                query = query.Where(l => l.LectureGrades.Any(lg => lg.GradeId == gradeId.Value));
+            }
+
+            var paginatedLectures = await PaginatedList<Lecture>.CreateAsync(query, page, pageSize);
+
+            return View(paginatedLectures);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int lectureId, string title)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                TempData["ErrorMessage"] = "اسم المحاضرة مطلوب.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var updatedLecture = await _lectureService.UpdateLectureTitleAsync(lectureId, title);
+            
+            if (updatedLecture == null)
+            {
+                TempData["ErrorMessage"] = "لم يتم العثور على المحاضرة.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            TempData["SuccessMessage"] = "تم تعديل اسم المحاضرة بنجاح.";
+            return RedirectToAction(nameof(Index));
+        }
+
         // ─── Create Lecture ────────────────────────────────────────────────────
 
         [HttpGet]

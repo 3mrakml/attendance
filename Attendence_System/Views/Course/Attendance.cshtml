@@ -87,15 +87,3 @@
     </div>
 </div>
 
-@section Scripts {
-    <script src="~/lib/xlsx/xlsx.full.min.js"></script>
-    <script src="~/lib/filesaver/FileSaver.min.js"></script>
-
-    <script>
-        function exportToExcel() {
-            var table = document.getElementById('studentsTable');
-            var wb = XLSX.utils.table_to_book(table, { sheet: "Students Attendance" });
-            XLSX.writeFile(wb, 'Course_Attendance_@(Model.CourseTitle).xlsx');
-        }
-    </script>
-}

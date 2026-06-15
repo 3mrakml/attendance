@@ -33,3 +33,20 @@ document.addEventListener('submit', function (e) {
         }, 10);
     }
 });
+
+// Fix BFCache issue: Reset forms when user navigates back
+window.addEventListener('pageshow', function (e) {
+    if (e.persisted || performance.getEntriesByType("navigation")[0]?.type === "back_forward") {
+        var submittingForms = document.querySelectorAll('form[data-submitting="true"]');
+        submittingForms.forEach(function (form) {
+            delete form.dataset.submitting;
+            var submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                if (submitBtn.dataset.originalText) {
+                    submitBtn.innerHTML = submitBtn.dataset.originalText;
+                }
+            }
+        });
+    }
+});
