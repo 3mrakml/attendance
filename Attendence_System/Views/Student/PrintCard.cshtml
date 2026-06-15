@@ -8,9 +8,9 @@
     <meta charset="utf-8" />
     <title>بطاقة الطالب - @Model.FullName</title>
     <!-- Use Tailwind via CDN for standalone printing -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="~/lib/tailwindcss/tailwindcss.js"></script>
+    <script src="~/lib/lucide/lucide.min.js"></script>
+    <link href="~/lib/fonts/cairo.css" rel="stylesheet" />
     <script>
         tailwind.config = {
             theme: {
@@ -60,7 +60,7 @@
         }
     </style>
     <!-- html-to-image for better RTL/Arabic support -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+    <script src="~/lib/html-to-image/html-to-image.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-8">
 

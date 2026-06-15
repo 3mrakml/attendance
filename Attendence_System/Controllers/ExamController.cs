@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Attendence_System.Filters;
+using Attendence_System.Extensions;
 
 namespace Attendence_System.Controllers
 {
@@ -71,15 +72,11 @@ namespace Attendence_System.Controllers
 
             var studentExams = await _examService.GetOrCreateStudentExamsAsync(id);
             
-            int pageSize = 50;
-            int totalItems = studentExams.Count;
-            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-            var paginatedExams = studentExams.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var routeParams = new Dictionary<string, string> { { "id", id.ToString() } };
+            var (paginatedExams, paginationInfo) = studentExams.Paginate(page, 50, "Scores", "Exam", routeParams);
 
             ViewBag.Exam = exam;
-            ViewBag.CurrentPage = page;
-            ViewBag.TotalPages = totalPages;
-            ViewBag.TotalItems = totalItems;
+            ViewBag.PaginationInfo = paginationInfo;
             
             return View(paginatedExams);
         }
@@ -150,14 +147,19 @@ namespace Attendence_System.Controllers
                 }
             }
 
-            int pageSize = 50;
-            int totalItems = studentExams.Count;
-            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-            var paginatedExams = studentExams.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var routeParams = new Dictionary<string, string>
+            {
+                { "courseId", courseId?.ToString() },
+                { "gradeId", gradeId?.ToString() },
+                { "examId", examId?.ToString() },
+                { "search", search },
+                { "sortCol", sortCol },
+                { "sortAsc", sortAsc.ToString().ToLower() }
+            };
 
-            ViewBag.CurrentPage = page;
-            ViewBag.TotalPages = totalPages;
-            ViewBag.TotalItems = totalItems;
+            var (paginatedExams, paginationInfo) = studentExams.Paginate(page, 50, "Results", "Exam", routeParams);
+
+            ViewBag.PaginationInfo = paginationInfo;
             ViewBag.SelectedExam = selectedExam;
             
             return View(paginatedExams);

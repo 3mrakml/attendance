@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Security.Claims;
 using Attendence_System.Filters;
+using Attendence_System.Extensions;
 
 namespace Attendence_System.Controllers
 {
@@ -155,10 +156,8 @@ namespace Attendence_System.Controllers
             .ThenBy(s => s.Student.FullName)
             .ToList();
 
-            int pageSize = 50;
-            int totalItems = studentsStatus.Count;
-            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-            var paginatedStudents = studentsStatus.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var routeParams = new Dictionary<string, string> { { "id", id.ToString() } };
+            var (paginatedStudents, paginationInfo) = studentsStatus.Paginate(page, 50, "Students", "Lecture", routeParams);
 
             var model = new LectureWithStudentsViewModel
             {
@@ -170,9 +169,7 @@ namespace Attendence_System.Controllers
                 Students = paginatedStudents
             };
 
-            ViewBag.CurrentPage = page;
-            ViewBag.TotalPages = totalPages;
-            ViewBag.TotalItems = totalItems;
+            ViewBag.PaginationInfo = paginationInfo;
 
             return View(model);
         }

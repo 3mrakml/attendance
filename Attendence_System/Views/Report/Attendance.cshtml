@@ -98,7 +98,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
-                        @{ int rowNum = (ViewBag.CurrentPage - 1) * 50; }
+                        @{ int rowNum = (ViewBag.PaginationInfo.CurrentPage - 1) * 50; }
                         @foreach (var s in Model)
                         {
                             rowNum++;
@@ -128,51 +128,7 @@
             </div>
 
             <!-- Pagination -->
-            @if (ViewBag.TotalPages > 1)
-            {
-                <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <div class="text-sm text-slate-500">
-                        عرض <span class="font-bold text-slate-900">@((ViewBag.CurrentPage - 1) * 50 + 1)</span> 
-                        إلى <span class="font-bold text-slate-900">@(Math.Min(ViewBag.CurrentPage * 50, ViewBag.TotalItems))</span> 
-                        من أصل <span class="font-bold text-slate-900">@ViewBag.TotalItems</span> طالب
-                    </div>
-                    
-                    <div class="flex items-center gap-2">
-                        @if (ViewBag.CurrentPage > 1)
-                        {
-                            <a href="@Url.Action("Attendance", new { gradeId = ViewBag.SelectedGradeId, page = ViewBag.CurrentPage - 1, sortCol = ViewBag.SortCol, sortAsc = ViewBag.SortAsc })" 
-                               class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors">
-                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
-                            </a>
-                        }
-                        
-                        <div class="flex items-center gap-1">
-                            @{
-                                int startPage = Math.Max(1, ViewBag.CurrentPage - 2);
-                                int endPage = Math.Min(ViewBag.TotalPages, startPage + 4);
-                                if (endPage - startPage < 4) { startPage = Math.Max(1, endPage - 4); }
-                            }
-                            
-                            @for (int p = startPage; p <= endPage; p++)
-                            {
-                                <a href="@Url.Action("Attendance", new { gradeId = ViewBag.SelectedGradeId, page = p, sortCol = ViewBag.SortCol, sortAsc = ViewBag.SortAsc })" 
-                                   class="w-10 h-10 flex items-center justify-center rounded-xl font-bold transition-all
-                                          @(p == ViewBag.CurrentPage ? "bg-primary text-white shadow-md shadow-primary/20" : "text-slate-600 hover:bg-slate-100")">
-                                    @p
-                                </a>
-                            }
-                        </div>
-
-                        @if (ViewBag.CurrentPage < ViewBag.TotalPages)
-                        {
-                            <a href="@Url.Action("Attendance", new { gradeId = ViewBag.SelectedGradeId, page = ViewBag.CurrentPage + 1, sortCol = ViewBag.SortCol, sortAsc = ViewBag.SortAsc })" 
-                               class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors">
-                                <i data-lucide="chevron-left" class="w-4 h-4"></i>
-                            </a>
-                        }
-                    </div>
-                </div>
-            }
+            <partial name="_Pagination" model="ViewBag.PaginationInfo" />
         }
     </div>
 </div>

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Microsoft.Extensions.Caching.Memory;
+using Attendence_System.Extensions;
 
 namespace Attendence_System.Controllers
 {
@@ -88,10 +89,14 @@ namespace Attendence_System.Controllers
             var studentsReport = await GetCachedReportAsync(gradeId);
             studentsReport = SortReport(studentsReport, sortCol, sortAsc);
 
-            int pageSize = 50;
-            int totalItems = studentsReport.Count;
-            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-            var paginatedStudents = studentsReport.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var routeParams = new Dictionary<string, string>
+            {
+                { "gradeId", gradeId?.ToString() },
+                { "sortCol", sortCol?.ToString() },
+                { "sortAsc", sortAsc.ToString().ToLower() }
+            };
+
+            var (paginatedStudents, paginationInfo) = studentsReport.Paginate(page, 50, "Index", "Report", routeParams);
 
             var grades = await _gradeService.GetAllGradesAsync();
             var gradeSettings = new List<GradeMarksViewModel>();
@@ -115,11 +120,9 @@ namespace Attendence_System.Controllers
             };
 
             ViewBag.Grades = grades;
-            ViewBag.CurrentPage = page;
-            ViewBag.TotalPages = totalPages;
-            ViewBag.TotalItems = totalItems;
             ViewBag.SortCol = sortCol;
             ViewBag.SortAsc = sortAsc;
+            ViewBag.PaginationInfo = paginationInfo;
 
             return View(model);
         }
@@ -190,18 +193,20 @@ namespace Attendence_System.Controllers
             var studentsReport = await GetCachedReportAsync(gradeId);
             studentsReport = SortReport(studentsReport, sortCol, sortAsc);
 
-            int pageSize = 50;
-            int totalItems = studentsReport.Count;
-            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-            var paginatedStudents = studentsReport.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var routeParams = new Dictionary<string, string>
+            {
+                { "gradeId", gradeId?.ToString() },
+                { "sortCol", sortCol?.ToString() },
+                { "sortAsc", sortAsc.ToString().ToLower() }
+            };
+
+            var (paginatedStudents, paginationInfo) = studentsReport.Paginate(page, 50, "Attendance", "Report", routeParams);
 
             ViewBag.Grades = await _gradeService.GetAllGradesAsync();
             ViewBag.SelectedGradeId = gradeId;
-            ViewBag.CurrentPage = page;
-            ViewBag.TotalPages = totalPages;
-            ViewBag.TotalItems = totalItems;
             ViewBag.SortCol = sortCol;
             ViewBag.SortAsc = sortAsc;
+            ViewBag.PaginationInfo = paginationInfo;
 
             return View(paginatedStudents);
         }
