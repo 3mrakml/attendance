@@ -3,6 +3,7 @@ using Attendence_System.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Attendence_System.Services;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,12 @@ builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddSingleton<System.TimeProvider>(System.TimeProvider.System);
 
+// Data Protection: Persist keys to disk so app restarts don't invalidate cookies
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")))
+    .SetApplicationName("Attendence_System");
+
+
 // Identity
 builder.Services.AddIdentityCore<AppUser>(options =>
 {
@@ -47,6 +54,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddCookie(IdentityConstants.ApplicationScheme, options =>
 {
+    options.Cookie.Name = "AttendanceSystem_Auth"; // يمنع تداخل الكوكيز مع أي مشاريع أخرى على نفس الجهاز
     options.LoginPath = "/Auth/Login";
     options.LogoutPath = "/Auth/Logout";
     options.ExpireTimeSpan = TimeSpan.FromDays(30);
@@ -55,6 +63,7 @@ builder.Services.AddAuthentication(options =>
 .AddCookie(IdentityConstants.ExternalScheme);
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddMemoryCache();
 
 // Application Services
 builder.Services.AddScoped<IQRCodeService, QRCodeService>();

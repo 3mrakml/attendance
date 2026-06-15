@@ -4,6 +4,7 @@ using Attendence_System.ViewModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Attendence_System.Controllers
 {
@@ -14,55 +15,111 @@ namespace Attendence_System.Controllers
         private readonly IGradeService _gradeService;
         private readonly ISystemSettingService _settingService;
         private readonly IExcelService _excelService;
+        private readonly IMemoryCache _cache;
 
         public ReportController(
             IStudentService studentService,
             IGradeService gradeService,
             ISystemSettingService settingService,
-            IExcelService excelService)
+            IExcelService excelService,
+            IMemoryCache cache)
         {
             _studentService = studentService;
             _gradeService = gradeService;
             _settingService = settingService;
             _excelService = excelService;
+            _cache = cache;
+        }
+
+        private async Task<List<StudentReportItem>> GetCachedReportAsync(int? gradeId)
+        {
+            var tenantId = User.FindFirstValue("TenantId");
+            string cacheKey = $"comprehensive_report_{tenantId}_{(gradeId.HasValue ? gradeId.Value.ToString() : "all")}";
+
+            if (!_cache.TryGetValue(cacheKey, out List<StudentReportItem>? studentsReport) || studentsReport == null)
+            {
+                studentsReport = await _studentService.GetComprehensiveReportAsync(gradeId);
+                var grades = await _gradeService.GetAllGradesAsync();
+
+                var gradeSettings = new Dictionary<int, double>();
+                foreach (var grade in grades)
+                {
+                    string key = $"Grade_{grade.GradeId}_Marks";
+                    string valStr = await _settingService.GetSettingAsync(key, "10");
+                    gradeSettings[grade.GradeId] = double.TryParse(valStr, out var parsed) ? parsed : 10;
+                }
+
+                foreach (var item in studentsReport)
+                {
+                    double maxMarks = gradeSettings.ContainsKey(item.GradeId) ? gradeSettings[item.GradeId] : 10;
+                    item.CalculatedScore = Math.Round((item.AttendancePercentage / 100.0) * maxMarks, 2);
+                }
+
+                _cache.Set(cacheKey, studentsReport, TimeSpan.FromMinutes(5));
+            }
+
+            return studentsReport;
+        }
+
+        private List<StudentReportItem> SortReport(List<StudentReportItem> report, int? sortCol, bool sortAsc)
+        {
+            if (!sortCol.HasValue) return report;
+
+            Func<StudentReportItem, object> keySelector = sortCol.Value switch
+            {
+                0 => s => s.FullName,
+                1 => s => s.GradeName,
+                2 => s => s.TotalLectures,
+                3 => s => s.AttendedLectures,
+                4 => s => s.AbsentLectures,
+                5 => s => s.AttendancePercentage,
+                6 => s => s.CalculatedScore,
+                7 => s => s.ExamTotalScore,
+                8 => s => s.TotalGrade,
+                _ => s => s.FullName
+            };
+
+            return sortAsc ? report.OrderBy(keySelector).ToList() : report.OrderByDescending(keySelector).ToList();
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(int? gradeId)
+        public async Task<IActionResult> Index(int? gradeId, int page = 1, int? sortCol = null, bool sortAsc = true)
         {
-            var studentsReport = await _studentService.GetComprehensiveReportAsync(gradeId);
-            var grades = await _gradeService.GetAllGradesAsync();
+            var studentsReport = await GetCachedReportAsync(gradeId);
+            studentsReport = SortReport(studentsReport, sortCol, sortAsc);
 
+            int pageSize = 50;
+            int totalItems = studentsReport.Count;
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            var paginatedStudents = studentsReport.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            var grades = await _gradeService.GetAllGradesAsync();
             var gradeSettings = new List<GradeMarksViewModel>();
             foreach (var grade in grades)
             {
                 string key = $"Grade_{grade.GradeId}_Marks";
                 string valStr = await _settingService.GetSettingAsync(key, "10");
-                double val = double.TryParse(valStr, out var parsed) ? parsed : 10;
-
                 gradeSettings.Add(new GradeMarksViewModel
                 {
                     GradeId = grade.GradeId,
                     GradeName = grade.Name,
-                    MaxMarks = val
+                    MaxMarks = double.TryParse(valStr, out var parsed) ? parsed : 10
                 });
-            }
-
-            foreach (var item in studentsReport)
-            {
-                var settings = gradeSettings.FirstOrDefault(g => g.GradeId == item.GradeId);
-                double maxMarks = settings?.MaxMarks ?? 10;
-                item.CalculatedScore = Math.Round((item.AttendancePercentage / 100.0) * maxMarks, 2);
             }
 
             var model = new ComprehensiveReportViewModel
             {
                 GradeSettings = gradeSettings,
-                Students = studentsReport,
+                Students = paginatedStudents,
                 SelectedGradeId = gradeId
             };
 
             ViewBag.Grades = grades;
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = totalPages;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.SortCol = sortCol;
+            ViewBag.SortAsc = sortAsc;
 
             return View(model);
         }
@@ -79,6 +136,18 @@ namespace Attendence_System.Controllers
                     await _settingService.SetSettingAsync(key, mark.Value.ToString());
                 }
             }
+            
+            var tenantId = User.FindFirstValue("TenantId");
+            if (!string.IsNullOrEmpty(tenantId))
+            {
+                // Clear report cache because scores changed
+                var grades = await _gradeService.GetAllGradesAsync();
+                _cache.Remove($"comprehensive_report_{tenantId}_all");
+                foreach (var grade in grades)
+                {
+                    _cache.Remove($"comprehensive_report_{tenantId}_{grade.GradeId}");
+                }
+            }
 
             TempData["SuccessMessage"] = "تم تحديث إعدادات الدرجات بنجاح.";
             return RedirectToAction("Index");
@@ -87,41 +156,8 @@ namespace Attendence_System.Controllers
         [HttpGet]
         public async Task<IActionResult> ExportExcel(int? gradeId, int? sortCol, bool sortAsc = true)
         {
-            var studentsReport = await _studentService.GetComprehensiveReportAsync(gradeId);
-            var grades = await _gradeService.GetAllGradesAsync();
-
-            var gradeSettings = new Dictionary<int, double>();
-            foreach (var grade in grades)
-            {
-                string key = $"Grade_{grade.GradeId}_Marks";
-                string valStr = await _settingService.GetSettingAsync(key, "10");
-                gradeSettings[grade.GradeId] = double.TryParse(valStr, out var parsed) ? parsed : 10;
-            }
-
-            foreach (var item in studentsReport)
-            {
-                double maxMarks = gradeSettings.ContainsKey(item.GradeId) ? gradeSettings[item.GradeId] : 10;
-                item.CalculatedScore = Math.Round((item.AttendancePercentage / 100.0) * maxMarks, 2);
-            }
-
-            if (sortCol.HasValue)
-            {
-                Func<StudentReportItem, object> keySelector = sortCol.Value switch
-                {
-                    0 => s => s.FullName,
-                    1 => s => s.GradeName,
-                    2 => s => s.TotalLectures,
-                    3 => s => s.AttendedLectures,
-                    4 => s => s.AbsentLectures,
-                    5 => s => s.AttendancePercentage,
-                    6 => s => s.CalculatedScore,
-                    _ => s => s.FullName
-                };
-
-                studentsReport = sortAsc
-                    ? studentsReport.OrderBy(keySelector).ToList()
-                    : studentsReport.OrderByDescending(keySelector).ToList();
-            }
+            var studentsReport = await GetCachedReportAsync(gradeId);
+            studentsReport = SortReport(studentsReport, sortCol, sortAsc);
 
             var columns = new Dictionary<string, Func<StudentReportItem, object>>
             {
@@ -149,21 +185,32 @@ namespace Attendence_System.Controllers
         // ─── Attendance-Only Report ────────────────────────────────────────────
 
         [HttpGet]
-        public async Task<IActionResult> Attendance(int? gradeId)
+        public async Task<IActionResult> Attendance(int? gradeId, int page = 1, int? sortCol = null, bool sortAsc = true)
         {
-            var studentsReport = await _studentService.GetComprehensiveReportAsync(gradeId);
-            var grades = await _gradeService.GetAllGradesAsync();
+            var studentsReport = await GetCachedReportAsync(gradeId);
+            studentsReport = SortReport(studentsReport, sortCol, sortAsc);
 
-            ViewBag.Grades = grades;
+            int pageSize = 50;
+            int totalItems = studentsReport.Count;
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            var paginatedStudents = studentsReport.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            ViewBag.Grades = await _gradeService.GetAllGradesAsync();
             ViewBag.SelectedGradeId = gradeId;
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = totalPages;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.SortCol = sortCol;
+            ViewBag.SortAsc = sortAsc;
 
-            return View(studentsReport);
+            return View(paginatedStudents);
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportAttendanceExcel(int? gradeId)
+        public async Task<IActionResult> ExportAttendanceExcel(int? gradeId, int? sortCol, bool sortAsc = true)
         {
-            var studentsReport = await _studentService.GetComprehensiveReportAsync(gradeId);
+            var studentsReport = await GetCachedReportAsync(gradeId);
+            studentsReport = SortReport(studentsReport, sortCol, sortAsc);
 
             var columns = new Dictionary<string, Func<StudentReportItem, object>>
             {

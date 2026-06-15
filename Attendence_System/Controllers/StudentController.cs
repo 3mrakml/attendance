@@ -1,13 +1,16 @@
 using Attendence_System.Models;
 using Attendence_System.Services;
+using Attendence_System.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Attendence_System.Controllers
 {
     [Authorize]
+    [AutoClearStudentCache]
     public class StudentController : Controller
     {
         private readonly IStudentService _studentService;
@@ -15,39 +18,74 @@ namespace Attendence_System.Controllers
         private readonly IGradeService _gradeService;
         private readonly IImportService _importService;
         private readonly ISystemSettingService _settingService;
+        private readonly IMemoryCache _cache;
 
         public StudentController(
             IStudentService studentService,
             IQRCodeService qrCodeService,
             IGradeService gradeService,
             IImportService importService,
-            ISystemSettingService settingService)
+            ISystemSettingService settingService,
+            IMemoryCache cache)
         {
             _studentService = studentService;
             _qrCodeService = qrCodeService;
             _gradeService = gradeService;
             _importService = importService;
             _settingService = settingService;
+            _cache = cache;
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string searchString, int? gradeId, int page = 1)
         {
-            var students = await _studentService.GetAllStudentsAsync();
+            var tenantId = User.FindFirstValue("TenantId");
+            string studentsCacheKey = $"students_index_{tenantId}";
+            string attCacheKey = $"attendance_perc_{tenantId}";
+
+            if (!_cache.TryGetValue(studentsCacheKey, out List<Student>? allStudents) || allStudents == null)
+            {
+                allStudents = await _studentService.GetAllStudentsAsync();
+                _cache.Set(studentsCacheKey, allStudents, TimeSpan.FromMinutes(30));
+            }
+
+            if (!_cache.TryGetValue(attCacheKey, out Dictionary<int, double>? attendancePercentages) || attendancePercentages == null)
+            {
+                attendancePercentages = await _studentService.GetStudentsAttendancePercentagesAsync();
+                _cache.Set(attCacheKey, attendancePercentages, TimeSpan.FromMinutes(30));
+            }
+
+            var filteredStudents = allStudents.AsEnumerable();
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                filteredStudents = filteredStudents.Where(s => 
+                    (s.FullName != null && s.FullName.Contains(searchString, StringComparison.OrdinalIgnoreCase)) ||
+                    (s.QRToken != null && s.QRToken.Contains(searchString, StringComparison.OrdinalIgnoreCase)) ||
+                    (s.PhoneNumber != null && s.PhoneNumber.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+                );
+            }
+            if (gradeId.HasValue)
+            {
+                filteredStudents = filteredStudents.Where(s => s.GradeId == gradeId.Value);
+            }
+
+            int pageSize = 50;
+            var totalItems = filteredStudents.Count();
+            var pagedStudents = filteredStudents.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
             var codeType = await _settingService.GetSettingAsync("CodeType", "QR");
             ViewBag.CodeType = codeType;
-
-            ViewBag.StudentQRCodes = students.ToDictionary(
-                s => s.StudentId,
-                s => codeType == "Barcode" ? _qrCodeService.GenerateBarcode(s.QRToken) : _qrCodeService.GenerateQRCode(s.QRToken)
-            );
-
             ViewBag.Grades = await _gradeService.GetAllGradesAsync();
-            ViewBag.AttendancePercentages = await _studentService.GetStudentsAttendancePercentagesAsync();
+            ViewBag.AttendancePercentages = attendancePercentages;
             ViewBag.AgeReferenceDate = await _settingService.GetSettingAsync("AgeReferenceDate", "");
 
-            return View(students);
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            ViewBag.SearchString = searchString;
+            ViewBag.GradeId = gradeId;
+            ViewBag.TotalItems = totalItems;
+
+            return View(pagedStudents);
         }
 
         [HttpGet]
@@ -156,11 +194,6 @@ namespace Attendence_System.Controllers
             var codeType = await _settingService.GetSettingAsync("CodeType", "QR");
             ViewBag.CodeType = codeType;
 
-            ViewBag.StudentQRCodes = students.ToDictionary(
-                s => s.StudentId,
-                s => codeType == "Barcode" ? _qrCodeService.GenerateBarcode(s.QRToken) : _qrCodeService.GenerateQRCode(s.QRToken)
-            );
-
             return View(students);
         }
 
@@ -173,11 +206,6 @@ namespace Attendence_System.Controllers
 
             var codeType = await _settingService.GetSettingAsync("CodeType", "QR");
             ViewBag.CodeType = codeType;
-
-            ViewBag.StudentQRCodes = students.ToDictionary(
-                s => s.StudentId,
-                s => codeType == "Barcode" ? _qrCodeService.GenerateBarcode(s.QRToken) : _qrCodeService.GenerateQRCode(s.QRToken)
-            );
 
             return View(students);
         }
@@ -195,6 +223,35 @@ namespace Attendence_System.Controllers
             ViewBag.CodeType = codeType;
             ViewBag.QRCode = codeType == "Barcode" ? _qrCodeService.GenerateBarcode(student.QRToken) : _qrCodeService.GenerateQRCode(student.QRToken);
             return View(student);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadCode(int id)
+        {
+            var student = await _studentService.GetStudentByIdAsync(id);
+            if (student == null)
+            {
+                return NotFound();
+            }
+
+            var codeType = await _settingService.GetSettingAsync("CodeType", "QR");
+            string base64String = codeType == "Barcode" 
+                ? _qrCodeService.GenerateBarcode(student.QRToken) 
+                : _qrCodeService.GenerateQRCode(student.QRToken);
+
+            if (string.IsNullOrEmpty(base64String))
+            {
+                return NotFound();
+            }
+
+            var parts = base64String.Split(',');
+            if (parts.Length != 2)
+            {
+                return NotFound();
+            }
+
+            byte[] imageBytes = Convert.FromBase64String(parts[1]);
+            return File(imageBytes, "image/png", $"Student_Code_{student.QRToken}.png");
         }
 
         // ─── Import from Excel ─────────────────────────────────────────────────

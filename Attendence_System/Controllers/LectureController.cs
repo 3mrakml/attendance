@@ -5,10 +5,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Security.Claims;
+using Attendence_System.Filters;
 
 namespace Attendence_System.Controllers
 {
     [Authorize]
+    [AutoClearStudentCache]
     public class LectureController : Controller
     {
         private readonly ILectureService _lectureService;
@@ -130,7 +132,7 @@ namespace Attendence_System.Controllers
         // ─── Lecture Students ──────────────────────────────────────────────────
 
         [HttpGet]
-        public async Task<IActionResult> Students(int id)
+        public async Task<IActionResult> Students(int id, int page = 1)
         {
             var lecture = await _lectureService.GetLectureByIdAsync(id);
             if (lecture == null)
@@ -153,6 +155,11 @@ namespace Attendence_System.Controllers
             .ThenBy(s => s.Student.FullName)
             .ToList();
 
+            int pageSize = 50;
+            int totalItems = studentsStatus.Count;
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            var paginatedStudents = studentsStatus.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
             var model = new LectureWithStudentsViewModel
             {
                 lectureid = lecture.LectureId,
@@ -160,8 +167,12 @@ namespace Attendence_System.Controllers
                 TotalStudents = studentsStatus.Count,
                 AttendedCount = studentsStatus.Count(s => s.IsAttended),
                 AbsentCount = studentsStatus.Count(s => !s.IsAttended),
-                Students = studentsStatus
+                Students = paginatedStudents
             };
+
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = totalPages;
+            ViewBag.TotalItems = totalItems;
 
             return View(model);
         }

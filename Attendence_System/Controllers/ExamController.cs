@@ -3,10 +3,12 @@ using Attendence_System.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Attendence_System.Filters;
 
 namespace Attendence_System.Controllers
 {
     [Authorize]
+    [AutoClearStudentCache]
     public class ExamController : Controller
     {
         private readonly IExamService _examService;
@@ -62,23 +64,33 @@ namespace Attendence_System.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Scores(int id)
+        public async Task<IActionResult> Scores(int id, int page = 1)
         {
             var exam = await _examService.GetExamWithStudentsAsync(id);
             if (exam == null) return NotFound();
 
             var studentExams = await _examService.GetOrCreateStudentExamsAsync(id);
+            
+            int pageSize = 50;
+            int totalItems = studentExams.Count;
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            var paginatedExams = studentExams.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
             ViewBag.Exam = exam;
-            return View(studentExams);
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = totalPages;
+            ViewBag.TotalItems = totalItems;
+            
+            return View(paginatedExams);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveScores(int examId, Dictionary<int, double?> scores)
+        public async Task<IActionResult> SaveScores(int examId, Dictionary<int, double?> scores, int page = 1)
         {
             await _examService.SaveStudentScoresAsync(examId, scores);
             TempData["SuccessMessage"] = "تم حفظ الدرجات بنجاح.";
-            return RedirectToAction(nameof(Scores), new { id = examId });
+            return RedirectToAction(nameof(Scores), new { id = examId, page = page });
         }
 
         [HttpPost]
@@ -93,7 +105,7 @@ namespace Attendence_System.Controllers
         // ─── Results (Report) ─────────────────────────────────────────
         [HttpGet]
         public async Task<IActionResult> Results(int? courseId, int? gradeId, int? examId,
-            string? search, string? sortCol, bool sortAsc = true)
+            string? search, string? sortCol, bool sortAsc = true, int page = 1)
         {
             ViewBag.Courses = await _courseService.GetAllCoursesAsync();
             ViewBag.Grades = await _gradeService.GetAllGradesAsync();
@@ -138,8 +150,17 @@ namespace Attendence_System.Controllers
                 }
             }
 
+            int pageSize = 50;
+            int totalItems = studentExams.Count;
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            var paginatedExams = studentExams.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = totalPages;
+            ViewBag.TotalItems = totalItems;
             ViewBag.SelectedExam = selectedExam;
-            return View(studentExams);
+            
+            return View(paginatedExams);
         }
 
         [HttpGet]

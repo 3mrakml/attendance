@@ -132,24 +132,17 @@
 
     @foreach (var student in Model)
     {
-        var qrCode = ViewBag.StudentQRCodes != null && ((IDictionary<int, string>)ViewBag.StudentQRCodes).ContainsKey(student.StudentId)
-            ? ViewBag.StudentQRCodes[student.StudentId]
-            : "";
-
         <div class="print-page">
-            @if (!string.IsNullOrEmpty(qrCode))
-            {
-                <div class="code-side">
-                    @if (ViewBag.CodeType == "Barcode")
-                    {
-                        <img src="@qrCode" class="barcode-image" alt="Barcode" />
-                    }
-                    else
-                    {
-                        <img src="@qrCode" class="qr-image" alt="QR Code" />
-                    }
-                </div>
-            }
+            <div class="code-side">
+                @if (ViewBag.CodeType == "Barcode")
+                {
+                    <img src="@Url.Action("DownloadCode", "Student", new { id = student.StudentId })" class="barcode-image" alt="Barcode" />
+                }
+                else
+                {
+                    <img src="@Url.Action("DownloadCode", "Student", new { id = student.StudentId })" class="qr-image" alt="QR Code" />
+                }
+            </div>
             <div class="info-side">
                 <div class="qr-name">@student.FullName</div>
                 <div class="qr-token">@student.QRToken</div>

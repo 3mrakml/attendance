@@ -89,16 +89,16 @@
                     <thead class="bg-slate-50 border-b border-slate-100 text-xs uppercase tracking-wider text-slate-500">
                         <tr>
                             <th class="px-4 py-3 text-right">#</th>
-                            <th class="px-4 py-3 text-right">الاسم</th>
-                            <th class="px-4 py-3 text-right">الصف</th>
-                            <th class="px-4 py-3 text-center">المحاضرات</th>
-                            <th class="px-4 py-3 text-center">حضور</th>
-                            <th class="px-4 py-3 text-center">غياب</th>
-                            <th class="px-4 py-3 text-center">نسبة الحضور</th>
+                            <th class="p-0 text-right hover:bg-slate-100 transition-colors"><a href="@Url.Action("Attendance", new { gradeId = ViewBag.SelectedGradeId, sortCol = 0, sortAsc = ViewBag.SortCol == 0 ? !(ViewBag.SortAsc ?? true) : true })" class="block px-4 py-3 w-full h-full">الاسم <i data-lucide="@(ViewBag.SortCol == 0 ? ((ViewBag.SortAsc ?? true) ? "arrow-up" : "arrow-down") : "arrow-up-down")" class="w-3 h-3 inline-block ml-1 @(ViewBag.SortCol == 0 ? "text-primary" : "opacity-40")"></i></a></th>
+                            <th class="p-0 text-right hover:bg-slate-100 transition-colors"><a href="@Url.Action("Attendance", new { gradeId = ViewBag.SelectedGradeId, sortCol = 1, sortAsc = ViewBag.SortCol == 1 ? !(ViewBag.SortAsc ?? true) : true })" class="block px-4 py-3 w-full h-full">الصف <i data-lucide="@(ViewBag.SortCol == 1 ? ((ViewBag.SortAsc ?? true) ? "arrow-up" : "arrow-down") : "arrow-up-down")" class="w-3 h-3 inline-block ml-1 @(ViewBag.SortCol == 1 ? "text-primary" : "opacity-40")"></i></a></th>
+                            <th class="p-0 text-center hover:bg-slate-100 transition-colors"><a href="@Url.Action("Attendance", new { gradeId = ViewBag.SelectedGradeId, sortCol = 2, sortAsc = ViewBag.SortCol == 2 ? !(ViewBag.SortAsc ?? true) : true })" class="block px-4 py-3 w-full h-full">المحاضرات <i data-lucide="@(ViewBag.SortCol == 2 ? ((ViewBag.SortAsc ?? true) ? "arrow-up" : "arrow-down") : "arrow-up-down")" class="w-3 h-3 inline-block ml-1 @(ViewBag.SortCol == 2 ? "text-primary" : "opacity-40")"></i></a></th>
+                            <th class="p-0 text-center hover:bg-slate-100 transition-colors"><a href="@Url.Action("Attendance", new { gradeId = ViewBag.SelectedGradeId, sortCol = 3, sortAsc = ViewBag.SortCol == 3 ? !(ViewBag.SortAsc ?? true) : true })" class="block px-4 py-3 w-full h-full">حضور <i data-lucide="@(ViewBag.SortCol == 3 ? ((ViewBag.SortAsc ?? true) ? "arrow-up" : "arrow-down") : "arrow-up-down")" class="w-3 h-3 inline-block ml-1 @(ViewBag.SortCol == 3 ? "text-primary" : "opacity-40")"></i></a></th>
+                            <th class="p-0 text-center hover:bg-slate-100 transition-colors"><a href="@Url.Action("Attendance", new { gradeId = ViewBag.SelectedGradeId, sortCol = 4, sortAsc = ViewBag.SortCol == 4 ? !(ViewBag.SortAsc ?? true) : true })" class="block px-4 py-3 w-full h-full">غياب <i data-lucide="@(ViewBag.SortCol == 4 ? ((ViewBag.SortAsc ?? true) ? "arrow-up" : "arrow-down") : "arrow-up-down")" class="w-3 h-3 inline-block ml-1 @(ViewBag.SortCol == 4 ? "text-primary" : "opacity-40")"></i></a></th>
+                            <th class="p-0 text-center hover:bg-slate-100 transition-colors"><a href="@Url.Action("Attendance", new { gradeId = ViewBag.SelectedGradeId, sortCol = 5, sortAsc = ViewBag.SortCol == 5 ? !(ViewBag.SortAsc ?? true) : true })" class="block px-4 py-3 w-full h-full">نسبة الحضور <i data-lucide="@(ViewBag.SortCol == 5 ? ((ViewBag.SortAsc ?? true) ? "arrow-up" : "arrow-down") : "arrow-up-down")" class="w-3 h-3 inline-block ml-1 @(ViewBag.SortCol == 5 ? "text-primary" : "opacity-40")"></i></a></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
-                        @{ int rowNum = 0; }
+                        @{ int rowNum = (ViewBag.CurrentPage - 1) * 50; }
                         @foreach (var s in Model)
                         {
                             rowNum++;
@@ -126,6 +126,53 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination -->
+            @if (ViewBag.TotalPages > 1)
+            {
+                <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div class="text-sm text-slate-500">
+                        عرض <span class="font-bold text-slate-900">@((ViewBag.CurrentPage - 1) * 50 + 1)</span> 
+                        إلى <span class="font-bold text-slate-900">@(Math.Min(ViewBag.CurrentPage * 50, ViewBag.TotalItems))</span> 
+                        من أصل <span class="font-bold text-slate-900">@ViewBag.TotalItems</span> طالب
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        @if (ViewBag.CurrentPage > 1)
+                        {
+                            <a href="@Url.Action("Attendance", new { gradeId = ViewBag.SelectedGradeId, page = ViewBag.CurrentPage - 1, sortCol = ViewBag.SortCol, sortAsc = ViewBag.SortAsc })" 
+                               class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </a>
+                        }
+                        
+                        <div class="flex items-center gap-1">
+                            @{
+                                int startPage = Math.Max(1, ViewBag.CurrentPage - 2);
+                                int endPage = Math.Min(ViewBag.TotalPages, startPage + 4);
+                                if (endPage - startPage < 4) { startPage = Math.Max(1, endPage - 4); }
+                            }
+                            
+                            @for (int p = startPage; p <= endPage; p++)
+                            {
+                                <a href="@Url.Action("Attendance", new { gradeId = ViewBag.SelectedGradeId, page = p, sortCol = ViewBag.SortCol, sortAsc = ViewBag.SortAsc })" 
+                                   class="w-10 h-10 flex items-center justify-center rounded-xl font-bold transition-all
+                                          @(p == ViewBag.CurrentPage ? "bg-primary text-white shadow-md shadow-primary/20" : "text-slate-600 hover:bg-slate-100")">
+                                    @p
+                                </a>
+                            }
+                        </div>
+
+                        @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+                        {
+                            <a href="@Url.Action("Attendance", new { gradeId = ViewBag.SelectedGradeId, page = ViewBag.CurrentPage + 1, sortCol = ViewBag.SortCol, sortAsc = ViewBag.SortAsc })" 
+                               class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors">
+                                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
         }
     </div>
 </div>

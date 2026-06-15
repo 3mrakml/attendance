@@ -73,24 +73,31 @@
     }
 
     <!-- Filters Section -->
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4">
+    <form id="filterForm" method="get" asp-action="Index" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4">
         <div class="flex-1 relative">
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
             </div>
-            <input type="text" id="searchInput" class="w-full pr-10 pl-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900" placeholder="البحث بالاسم أو المعرف..." />
+            <input type="text" id="searchInput" name="searchString" value="@ViewBag.SearchString" class="w-full pr-10 pl-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900" placeholder="البحث بالاسم، المعرف أو الموبايل..." />
         </div>
         <div class="sm:w-64 relative">
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 <i data-lucide="funnel" class="w-4 h-4 text-slate-400"></i>
             </div>
-            <select id="gradeFilter" class="w-full pr-10 pl-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 appearance-none bg-white">
+            <select id="gradeFilter" name="gradeId" class="w-full pr-10 pl-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900 appearance-none bg-white">
                 <option value="">كل الصفوف</option>
                 @if (ViewBag.Grades != null)
                 {
                     foreach (var grade in ViewBag.Grades)
                     {
-                        <option value="@grade.Name">@grade.Name</option>
+                        if (ViewBag.GradeId != null && ViewBag.GradeId == grade.GradeId)
+                        {
+                            <option value="@grade.GradeId" selected>@grade.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@grade.GradeId">@grade.Name</option>
+                        }
                     }
                 }
             </select>
@@ -98,7 +105,8 @@
                 <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
             </div>
         </div>
-    </div>
+        <input type="hidden" name="page" value="1" id="pageInput" />
+    </form>
 
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div class="overflow-x-auto">
@@ -161,12 +169,9 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                     <div class="flex items-center justify-center gap-2">
-                                        @if (ViewBag.StudentQRCodes != null && ViewBag.StudentQRCodes.ContainsKey(item.StudentId))
-                                        {
-                                            <a href="@ViewBag.StudentQRCodes[item.StudentId]" download="Student_QR_@item.QRToken" class="action-btn action-btn-info" title="تحميل رمز QR">
-                                                <i data-lucide="download" class="w-4 h-4"></i>
-                                            </a>
-                                        }
+                                        <a href="@Url.Action("DownloadCode", "Student", new { id = item.StudentId })" class="action-btn action-btn-info" title="تحميل رمز QR">
+                                            <i data-lucide="download" class="w-4 h-4"></i>
+                                        </a>
                                         <a href="@Url.Action("PrintSingleQR", "Student", new { id = item.StudentId })" target="_blank" class="action-btn action-btn-info" title="طباعة ملصق QR (حراري)">
                                             <i data-lucide="printer" class="w-4 h-4"></i>
                                         </a>
@@ -207,6 +212,93 @@
             </table>
         </div>
     </div>
+
+    <!-- Pagination -->
+    @if (ViewBag.TotalPages > 1)
+    {
+        <div class="flex items-center justify-between bg-white px-4 py-3 border border-slate-100 rounded-2xl shadow-sm mt-4">
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-slate-700">
+                        إجمالي الطلاب <span class="font-bold">@ViewBag.TotalItems</span>
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination" dir="ltr">
+                        @if (ViewBag.CurrentPage > 1)
+                        {
+                            <a href="@Url.Action("Index", new { page = ViewBag.CurrentPage - 1, searchString = ViewBag.SearchString, gradeId = ViewBag.GradeId })" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50">
+                                <span class="sr-only">Previous</span>
+                                <i data-lucide="chevron-left" class="h-5 w-5"></i>
+                            </a>
+                        }
+                        
+                        @{
+                            int startPage = Math.Max(1, ViewBag.CurrentPage - 2);
+                            int endPage = Math.Min(ViewBag.TotalPages, startPage + 4);
+                            if (endPage - startPage < 4) {
+                                startPage = Math.Max(1, endPage - 4);
+                            }
+                        }
+
+                        @for (int i = startPage; i <= endPage; i++)
+                        {
+                            if (i == ViewBag.CurrentPage)
+                            {
+                                <span class="relative inline-flex items-center px-4 py-2 border border-primary bg-primary/10 text-sm font-bold text-primary">
+                                    @i
+                                </span>
+                            }
+                            else
+                            {
+                                <a href="@Url.Action("Index", new { page = i, searchString = ViewBag.SearchString, gradeId = ViewBag.GradeId })" class="relative inline-flex items-center px-4 py-2 border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                    @i
+                                </a>
+                            }
+                        }
+
+                        @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+                        {
+                            <a href="@Url.Action("Index", new { page = ViewBag.CurrentPage + 1, searchString = ViewBag.SearchString, gradeId = ViewBag.GradeId })" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50">
+                                <span class="sr-only">Next</span>
+                                <i data-lucide="chevron-right" class="h-5 w-5"></i>
+                            </a>
+                        }
+                    </nav>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-between w-full sm:hidden">
+                @if (ViewBag.CurrentPage > 1)
+                {
+                    <a href="@Url.Action("Index", new { page = ViewBag.CurrentPage - 1, searchString = ViewBag.SearchString, gradeId = ViewBag.GradeId })" class="relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">
+                        السابق
+                    </a>
+                }
+                else
+                {
+                    <span class="relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-300 bg-slate-50 cursor-not-allowed">
+                        السابق
+                    </span>
+                }
+                
+                <span class="text-sm font-medium text-slate-700">@ViewBag.CurrentPage / @ViewBag.TotalPages</span>
+
+                @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+                {
+                    <a href="@Url.Action("Index", new { page = ViewBag.CurrentPage + 1, searchString = ViewBag.SearchString, gradeId = ViewBag.GradeId })" class="relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50">
+                        التالي
+                    </a>
+                }
+                else
+                {
+                    <span class="relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-300 bg-slate-50 cursor-not-allowed">
+                        التالي
+                    </span>
+                }
+            </div>
+        </div>
+    }
 </div>
 
 <!-- Edit Student Modal -->
@@ -394,38 +486,25 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
-            function filterTable() {
-                var searchTerm = $('#searchInput').val().toLowerCase();
-                var selectedGrade = $('#gradeFilter').val();
+            var typingTimer;                
+            var doneTypingInterval = 500;  
 
-                $('tbody tr.js-delete-parent').each(function() {
-                    // id in column 0, name in column 1, grade in column 2, attendance in column 3, qr in column 4
-                    var rowText = $(this).find('td:eq(0)').text().toLowerCase() + " " + 
-                                  $(this).find('td:eq(1)').text().toLowerCase() + " " +
-                                  $(this).find('td:eq(4)').text().toLowerCase();
-                    var gradeText = $(this).find('td:eq(2)').text().trim();
-                    
-                    var matchesSearch = searchTerm === "" || rowText.indexOf(searchTerm) > -1;
-                    var matchesGrade = selectedGrade === "" || gradeText === selectedGrade;
+            $('#searchInput').on('keyup', function () {
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(function() {
+                    $('#pageInput').val('1'); 
+                    $('#filterForm').submit();
+                }, doneTypingInterval);
+            });
 
-                    if (matchesSearch && matchesGrade) {
-                        $(this).show();
-                    } else {
-                        $(this).hide();
-                    }
-                });
-            }
+            $('#searchInput').on('keydown', function () {
+                clearTimeout(typingTimer);
+            });
 
-            $('#searchInput').on('keyup', filterTable);
-            $('#gradeFilter').on('change', filterTable);
-
-            // Read gradeName from URL and pre-filter if coming from Grade page
-            const urlParams = new URLSearchParams(window.location.search);
-            const gradeNameFromUrl = urlParams.get('gradeName');
-            if (gradeNameFromUrl) {
-                $('#gradeFilter').val(gradeNameFromUrl);
-                filterTable();
-            }
+            $('#gradeFilter').on('change', function() {
+                $('#pageInput').val('1'); 
+                $('#filterForm').submit();
+            });
 
             $(document).on('click', '.js-edit-student', function() {
                 var btn = $(this);
