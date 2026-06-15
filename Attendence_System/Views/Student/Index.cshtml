@@ -113,7 +113,7 @@
             <table class="min-w-full divide-y divide-slate-100">
                 <thead class="bg-slate-50/50">
                     <tr>
-                        <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">المعرف</th>
+                        <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">#</th>
                         <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الاسم بالكامل</th>
                         <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الفرقة/الصف</th>
                         <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">نسبة الحضور</th>
@@ -124,10 +124,11 @@
                 <tbody class="bg-white divide-y divide-slate-100">
                     @if (Model != null && Model.Any())
                     {
+                        int currentIndex = ((ViewBag.CurrentPage ?? 1) - 1) * 50 + 1;
                         @foreach (var item in Model)
                         {
                             <tr class="hover:bg-slate-50/80 transition-colors group js-delete-parent">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium">#@item.StudentId</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium">@(currentIndex++)</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <a asp-action="Report" asp-route-id="@item.StudentId" class="flex items-center hover:bg-slate-50 p-2 -ml-2 rounded-xl transition-colors group/link cursor-pointer">
                                         <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold group-hover/link:bg-primary group-hover/link:text-white transition-colors">
