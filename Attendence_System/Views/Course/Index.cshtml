@@ -29,9 +29,18 @@
                         <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xl shadow-sm">
                             <i data-lucide="book-text" class="w-5 h-5"></i>
                         </div>
-                        <button type="button" class="action-btn action-btn-danger js-delete" data-id="@course.CourseId" data-type="course" title="حذف المادة">
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        </button>
+                        <div class="flex gap-2 z-20 relative">
+                            <button type="button" class="action-btn action-btn-primary js-edit-course" 
+                                    data-id="@course.CourseId" 
+                                    data-name="@course.Name" 
+                                    data-grades="@(course.CourseGrades != null ? string.Join(",", course.CourseGrades.Select(g => g.GradeId)) : "")" 
+                                    title="تعديل المادة">
+                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                            </button>
+                            <button type="button" class="action-btn action-btn-danger js-delete" data-id="@course.CourseId" data-type="course" title="حذف المادة">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
                     </div>
                     
                     <h3 class="text-xl font-bold text-slate-800 mb-2">@course.Name</h3>
@@ -74,3 +83,87 @@
 </div>
 
 <partial name="_AddCoursePartial" model="Model" />
+
+<!-- Edit Course Modal -->
+<div id="editCourseModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex justify-center items-center overflow-y-auto">
+    <div class="bg-white rounded-3xl w-full max-w-md mx-4 shadow-2xl overflow-hidden transform transition-all my-8">
+        <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="pencil" class="w-5 h-5 text-primary"></i>
+                تعديل المادة
+            </h3>
+            <button type="button" onclick="document.getElementById('editCourseModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form asp-controller="Course" asp-action="Edit" method="post" class="p-6">
+            <input type="hidden" id="editCourseId" name="courseId" />
+            <div class="space-y-5">
+                <div>
+                    <label for="editCourseName" class="block text-sm font-semibold text-slate-700 mb-2">اسم المادة</label>
+                    <input type="text" id="editCourseName" name="Name" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900" placeholder="مثال: لغة عربية - مراجعة نهائية" />
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">الصفوف الدراسية المرتبطة بالمادة</label>
+                    <div class="max-h-48 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50/50">
+                        @if (Model.AvailableGrades != null && Model.AvailableGrades.Any())
+                        {
+                            @foreach (var grade in Model.AvailableGrades)
+                            {
+                                <label class="flex items-center gap-3 p-2 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors group">
+                                    <input type="checkbox" name="selectedGradeIds" value="@grade.GradeId" class="w-4 h-4 text-primary bg-white border-slate-300 rounded focus:ring-primary edit-grade-checkbox" />
+                                    <span class="text-slate-700 font-medium group-hover:text-slate-900">@grade.Name</span>
+                                </label>
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-sm text-slate-500 text-center py-2">لا توجد صفوف مضافة. يرجى إضافة صفوف من إدارة الصفوف أولاً.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="mt-8 flex gap-3">
+                <button type="submit" class="flex-1 btn btn-primary py-2.5">
+                    حفظ التعديلات
+                </button>
+                <button type="button" onclick="document.getElementById('editCourseModal').classList.add('hidden')" class="flex-1 btn btn-neutral py-2.5">
+                    إلغاء
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const editButtons = document.querySelectorAll('.js-edit-course');
+        const editModal = document.getElementById('editCourseModal');
+        const courseIdInput = document.getElementById('editCourseId');
+        const courseNameInput = document.getElementById('editCourseName');
+        const gradeCheckboxes = document.querySelectorAll('.edit-grade-checkbox');
+
+        editButtons.forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const id = this.getAttribute('data-id');
+                const name = this.getAttribute('data-name');
+                const gradesStr = this.getAttribute('data-grades') || '';
+                const gradesArr = gradesStr.split(',');
+
+                courseIdInput.value = id;
+                courseNameInput.value = name;
+
+                // Reset all checkboxes
+                gradeCheckboxes.forEach(cb => {
+                    cb.checked = false;
+                    if (gradesArr.includes(cb.value)) {
+                        cb.checked = true;
+                    }
+                });
+
+                editModal.classList.remove('hidden');
+            });
+        });
+    });
+</script>

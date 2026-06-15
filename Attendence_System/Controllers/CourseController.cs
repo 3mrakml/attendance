@@ -61,6 +61,21 @@ namespace Attendence_System.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int courseId, string name, List<int> selectedGradeIds)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest("اسم المادة مطلوب");
+
+            var updatedCourse = await _courseService.UpdateCourseAsync(courseId, name, selectedGradeIds);
+            
+            if (updatedCourse == null)
+                return NotFound();
+
+            return RedirectToAction(nameof(Index));
+        }
+
         [HttpDelete]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteCourse(int id)

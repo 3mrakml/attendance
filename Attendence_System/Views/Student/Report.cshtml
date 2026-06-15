@@ -13,12 +13,16 @@
             </div>
             <div>
                 <h2 class="text-2xl font-bold text-slate-800">@Model.Student.FullName</h2>
-                <div class="flex items-center gap-3 mt-1 text-sm text-slate-500 font-medium">
+                <div class="flex flex-wrap items-center gap-3 mt-1 text-sm text-slate-500 font-medium">
                     <span><i data-lucide="graduation-cap" class="w-4 h-4 inline-block mr-1"></i> @(Model.Student.Grade?.Name ?? "بدون صف")</span>
-                    <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                    <span class="hidden sm:inline-block w-1 h-1 rounded-full bg-slate-300"></span>
                     <span><i data-lucide="scan-barcode" class="w-4 h-4 inline-block mr-1"></i> @Model.Student.QRToken</span>
-                    <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                    <span><i data-lucide="calendar" class="w-4 h-4 inline-block mr-1"></i> @Model.Student.Age سنة</span>
+                    <span class="hidden sm:inline-block w-1 h-1 rounded-full bg-slate-300"></span>
+                    <span><i data-lucide="phone" class="w-4 h-4 inline-block mr-1"></i> @(string.IsNullOrEmpty(Model.Student.PhoneNumber) ? "غير مسجل" : Model.Student.PhoneNumber)</span>
+                    <span class="hidden sm:inline-block w-1 h-1 rounded-full bg-slate-300"></span>
+                    <span title="تاريخ الميلاد"><i data-lucide="cake" class="w-4 h-4 inline-block mr-1"></i> @(Model.Student.DateOfBirth.HasValue ? Model.Student.DateOfBirth.Value.ToString("yyyy-MM-dd") : "غير مسجل")</span>
+                    <span class="hidden sm:inline-block w-1 h-1 rounded-full bg-slate-300"></span>
+                    <span><i data-lucide="user" class="w-4 h-4 inline-block mr-1"></i> @Model.Student.Age سنة</span>
                 </div>
             </div>
         </div>

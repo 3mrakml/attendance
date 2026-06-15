@@ -49,6 +49,35 @@ namespace Attendence_System.Services
             return course;
         }
 
+        public async Task<Course?> UpdateCourseAsync(int courseId, string name, List<int> gradeIds)
+        {
+            var course = await _context.Courses
+                .Include(c => c.CourseGrades)
+                .FirstOrDefaultAsync(c => c.CourseId == courseId);
+
+            if (course == null) return null;
+
+            course.Name = name;
+
+            // Remove existing grades
+            _context.CourseGrades.RemoveRange(course.CourseGrades);
+
+            // Add new grades
+            if (gradeIds != null && gradeIds.Any())
+            {
+                var newGrades = gradeIds.Select(gradeId => new CourseGrade
+                {
+                    CourseId = course.CourseId,
+                    GradeId = gradeId
+                }).ToList();
+
+                _context.CourseGrades.AddRange(newGrades);
+            }
+
+            await _context.SaveChangesAsync();
+            return course;
+        }
+
         public async Task<bool> DeleteCourseAsync(int id)
         {
             // Global filter ensures we can only see our own courses

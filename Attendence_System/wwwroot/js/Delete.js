@@ -95,4 +95,35 @@ $(document).ready(function () {
             }
         }
     });
+
+    // Handle form-based deletes (like Exams)
+    $(document).on('submit', '.js-delete-form', function (e) {
+        e.preventDefault();
+        var form = $(this);
+        var button = form.find('button[type="submit"]');
+        var confirmMsg = button.data('confirm-message') || 'هل أنت متأكد أنك تريد الحذف؟';
+
+        const swal = Swal.mixin({
+            customClass: {
+                confirmButton: 'bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 px-6 rounded-xl mx-2 shadow-sm transition-colors',
+                cancelButton: 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-6 rounded-xl mx-2 transition-colors',
+                popup: 'rounded-2xl shadow-xl border border-slate-100'
+            },
+            buttonsStyling: false
+        });
+
+        swal.fire({
+            title: confirmMsg,
+            text: "لن تتمكن من التراجع عن هذا الإجراء!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، احذفه!',
+            cancelButtonText: 'لا، إلغاء!',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form[0].submit();
+            }
+        });
+    });
 });
