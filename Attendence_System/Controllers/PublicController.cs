@@ -49,8 +49,43 @@ namespace Attendence_System.Controllers
                 .Where(g => g.TenantId == tenantId)
                 .ToListAsync();
 
+            var ageReferenceDateStr = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == tenantId && s.Key == "AgeReferenceDate")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync();
+
+            var showPhoneNumberFieldStr = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == tenantId && s.Key == "ShowPhoneNumberField")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync() ?? "true";
+
+            var showDateOfBirthFieldStr = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == tenantId && s.Key == "ShowDateOfBirthField")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync() ?? "true";
+
+            var showAgeFieldStr = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == tenantId && s.Key == "ShowAgeField")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync() ?? "true";
+
+            var showGradeFieldStr = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == tenantId && s.Key == "ShowGradeField")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync() ?? "true";
+
             ViewBag.TenantId = tenantId;
             ViewBag.Grades = grades;
+            ViewBag.AgeReferenceDate = ageReferenceDateStr;
+            ViewBag.ShowPhoneNumberField = showPhoneNumberFieldStr == "true";
+            ViewBag.ShowDateOfBirthField = showDateOfBirthFieldStr == "true";
+            ViewBag.ShowAgeField = showAgeFieldStr == "true";
+            ViewBag.ShowGradeField = showGradeFieldStr == "true";
             return View();
         }
 
@@ -75,6 +110,27 @@ namespace Attendence_System.Controllers
             ModelState.Remove("TenantId");
             ModelState.Remove("Tenant");
 
+            var showGradeFieldStr = await _context.SystemSettings
+                .IgnoreQueryFilters()
+                .Where(s => s.TenantId == tenantId && s.Key == "ShowGradeField")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync() ?? "true";
+
+            if (showGradeFieldStr != "true")
+            {
+                var defaultGradeIdStr = await _context.SystemSettings
+                    .IgnoreQueryFilters()
+                    .Where(s => s.TenantId == tenantId && s.Key == "DefaultGradeId")
+                    .Select(s => s.Value)
+                    .FirstOrDefaultAsync();
+
+                if (int.TryParse(defaultGradeIdStr, out int defaultGradeId))
+                {
+                    model.GradeId = defaultGradeId;
+                    ModelState.Remove("GradeId");
+                }
+            }
+
             if (!ModelState.IsValid)
             {
                 var grades = await _context.Grades
@@ -82,8 +138,37 @@ namespace Attendence_System.Controllers
                     .Where(g => g.TenantId == tenantId)
                     .ToListAsync();
 
+                var ageReferenceDateStr = await _context.SystemSettings
+                    .IgnoreQueryFilters()
+                    .Where(s => s.TenantId == tenantId && s.Key == "AgeReferenceDate")
+                    .Select(s => s.Value)
+                    .FirstOrDefaultAsync();
+
+                var showPhoneNumberFieldStr = await _context.SystemSettings
+                    .IgnoreQueryFilters()
+                    .Where(s => s.TenantId == tenantId && s.Key == "ShowPhoneNumberField")
+                    .Select(s => s.Value)
+                    .FirstOrDefaultAsync() ?? "true";
+
+                var showDateOfBirthFieldStr = await _context.SystemSettings
+                    .IgnoreQueryFilters()
+                    .Where(s => s.TenantId == tenantId && s.Key == "ShowDateOfBirthField")
+                    .Select(s => s.Value)
+                    .FirstOrDefaultAsync() ?? "true";
+
+                var showAgeFieldStr = await _context.SystemSettings
+                    .IgnoreQueryFilters()
+                    .Where(s => s.TenantId == tenantId && s.Key == "ShowAgeField")
+                    .Select(s => s.Value)
+                    .FirstOrDefaultAsync() ?? "true";
+
                 ViewBag.TenantId = tenantId;
                 ViewBag.Grades = grades;
+                ViewBag.AgeReferenceDate = ageReferenceDateStr;
+                ViewBag.ShowPhoneNumberField = showPhoneNumberFieldStr == "true";
+                ViewBag.ShowDateOfBirthField = showDateOfBirthFieldStr == "true";
+                ViewBag.ShowAgeField = showAgeFieldStr == "true";
+                ViewBag.ShowGradeField = showGradeFieldStr == "true";
                 return View(model);
             }
 

@@ -31,6 +31,11 @@ namespace Attendence_System.Controllers
             var tenantId = User.FindFirstValue("TenantId");
 
             var isRegistrationOpenStr = await _settingService.GetSettingAsync("IsRegistrationOpen", "false");
+            var showPhoneNumberFieldStr = await _settingService.GetSettingAsync("ShowPhoneNumberField", "true");
+            var showDateOfBirthFieldStr = await _settingService.GetSettingAsync("ShowDateOfBirthField", "true");
+            var showAgeFieldStr = await _settingService.GetSettingAsync("ShowAgeField", "true");
+            var showGradeFieldStr = await _settingService.GetSettingAsync("ShowGradeField", "true");
+            var defaultGradeIdStr = await _settingService.GetSettingAsync("DefaultGradeId", "");
             var registrationSuccessMessage = await _settingService.GetSettingAsync("RegistrationSuccessMessage", "تم التسجيل بنجاح! احتفظ بالباركود الخاص بك.");
             var whatsappGroupLink = await _settingService.GetSettingAsync("WhatsAppGroupLink", "");
             var ageReferenceDate = await _settingService.GetSettingAsync("AgeReferenceDate", "");
@@ -38,11 +43,20 @@ namespace Attendence_System.Controllers
             var isGradeQueryOpenStr = await _settingService.GetSettingAsync("IsGradeQueryOpen", "false");
 
             ViewBag.IsRegistrationOpen = isRegistrationOpenStr == "true";
+            ViewBag.ShowPhoneNumberField = showPhoneNumberFieldStr == "true";
+            ViewBag.ShowDateOfBirthField = showDateOfBirthFieldStr == "true";
+            ViewBag.ShowAgeField = showAgeFieldStr == "true";
+            ViewBag.ShowGradeField = showGradeFieldStr == "true";
+            ViewBag.DefaultGradeId = defaultGradeIdStr;
             ViewBag.IsGradeQueryOpen = isGradeQueryOpenStr == "true";
             ViewBag.RegistrationSuccessMessage = registrationSuccessMessage;
             ViewBag.WhatsAppGroupLink = whatsappGroupLink;
             ViewBag.AgeReferenceDate = ageReferenceDate;
             ViewBag.TenantId = tenantId;
+
+            // Load Grades for Default Grade selection
+            var grades = _context.Grades.Where(g => g.TenantId == tenantId).ToList();
+            ViewBag.Grades = grades;
 
             return View();
         }
@@ -74,11 +88,16 @@ namespace Attendence_System.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateSettings(bool isRegistrationOpen, string registrationSuccessMessage, string whatsappGroupLink, string ageReferenceDate)
+        public async Task<IActionResult> UpdateSettings(bool isRegistrationOpen, bool showPhoneNumberField, bool showDateOfBirthField, bool showAgeField, bool showGradeField, string defaultGradeId, string registrationSuccessMessage, string whatsappGroupLink, string ageReferenceDate)
         {
             var tenantId = User.FindFirstValue("TenantId");
 
             await EnsureSettingWithTenant("IsRegistrationOpen", isRegistrationOpen ? "true" : "false", tenantId!);
+            await EnsureSettingWithTenant("ShowPhoneNumberField", showPhoneNumberField ? "true" : "false", tenantId!);
+            await EnsureSettingWithTenant("ShowDateOfBirthField", showDateOfBirthField ? "true" : "false", tenantId!);
+            await EnsureSettingWithTenant("ShowAgeField", showAgeField ? "true" : "false", tenantId!);
+            await EnsureSettingWithTenant("ShowGradeField", showGradeField ? "true" : "false", tenantId!);
+            await EnsureSettingWithTenant("DefaultGradeId", defaultGradeId ?? "", tenantId!);
             await EnsureSettingWithTenant("RegistrationSuccessMessage", registrationSuccessMessage ?? "", tenantId!);
             await EnsureSettingWithTenant("WhatsAppGroupLink", whatsappGroupLink ?? "", tenantId!);
             await EnsureSettingWithTenant("AgeReferenceDate", ageReferenceDate ?? "", tenantId!);
