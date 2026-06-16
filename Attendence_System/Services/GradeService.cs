@@ -22,6 +22,11 @@ namespace Attendence_System.Services
                 .ToListAsync();
         }
 
+        public async Task<List<Grade>> GetAllGradesBasicAsync()
+        {
+            return await _context.Grades.ToListAsync();
+        }
+
         public async Task<Grade?> GetGradeByIdAsync(int id)
         {
             return await _context.Grades

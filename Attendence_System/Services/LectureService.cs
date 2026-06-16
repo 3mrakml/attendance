@@ -100,12 +100,24 @@ namespace Attendence_System.Services
                 .ToListAsync();
         }
 
+        public async Task<Dictionary<int, int>> GetAttendedCountsForLecturesAsync(List<int> lectureIds)
+        {
+            if (lectureIds == null || !lectureIds.Any())
+                return new Dictionary<int, int>();
+
+            return await _context.StudentLectures
+                .Where(sl => lectureIds.Contains(sl.LectureId))
+                .GroupBy(sl => sl.LectureId)
+                .Select(g => new { LectureId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.LectureId, g => g.Count);
+        }
+
         public System.Linq.IQueryable<Lecture> GetAllLecturesQueryable()
         {
             return _context.Lectures
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Include(l => l.Course)
-                .Include(l => l.StudentLectures)
                 .Include(l => l.LectureGrades)
                     .ThenInclude(lg => lg.Grade)
                 .OrderByDescending(l => l.DateTime)

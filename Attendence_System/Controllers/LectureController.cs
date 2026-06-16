@@ -41,7 +41,7 @@ namespace Attendence_System.Controllers
         {
             ViewBag.CurrentSearch = search;
             ViewBag.CurrentGradeId = gradeId;
-            ViewBag.Grades = await _gradeService.GetAllGradesAsync();
+            ViewBag.Grades = await _gradeService.GetAllGradesBasicAsync();
 
             int pageSize = 20;
 
@@ -59,10 +59,14 @@ namespace Attendence_System.Controllers
 
             var paginatedLectures = await PaginatedList<Lecture>.CreateAsync(query, page, pageSize);
 
-            // Fetch student counts per grade to calculate attendance percentage
-            var allStudents = await _studentService.GetAllStudentsAsync();
-            var studentCountByGrade = allStudents.GroupBy(s => s.GradeId).ToDictionary(g => g.Key, g => g.Count());
+            // Fetch student counts per grade to calculate attendance percentage via optimized SQL
+            var studentCountByGrade = await _studentService.GetStudentCountByGradeAsync();
             ViewBag.StudentCountByGrade = studentCountByGrade;
+
+            // Fetch attended counts for the paginated lectures only
+            var lectureIds = paginatedLectures.Select(l => l.LectureId).ToList();
+            var attendedCounts = await _lectureService.GetAttendedCountsForLecturesAsync(lectureIds);
+            ViewBag.AttendedCounts = attendedCounts;
 
             return View(paginatedLectures);
         }

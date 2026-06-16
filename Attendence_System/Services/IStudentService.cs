@@ -21,5 +21,6 @@ namespace Attendence_System.Services
         Task<Dictionary<int, double>> GetStudentsAttendancePercentagesAsync();
         Task<StudentReportViewModel?> GetStudentReportAsync(int studentId);
         Task<List<StudentReportItem>> GetComprehensiveReportAsync(int? gradeId);
+        Task<Dictionary<int, int>> GetStudentCountByGradeAsync();
     }
 }

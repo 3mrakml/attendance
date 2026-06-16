@@ -13,6 +13,7 @@ namespace Attendence_System.Services
         Task<bool> DeleteLectureAsync(int lectureId);
         Task<Lecture?> UpdateLectureTitleAsync(int lectureId, string title);
         Task<List<Student>> GetStudentsInLectureAsync(int lectureId);
+        Task<Dictionary<int, int>> GetAttendedCountsForLecturesAsync(List<int> lectureIds);
         System.Linq.IQueryable<Lecture> GetAllLecturesQueryable();
     }
 }

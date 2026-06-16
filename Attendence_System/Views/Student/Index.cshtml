@@ -73,7 +73,7 @@
     }
 
     <!-- Filters Section -->
-    <form id="filterForm" method="get" asp-action="Index" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4">
+    <form id="filterForm" method="get" asp-action="Index" class="js-auto-filter bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4">
         <div class="flex-1 relative">
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
@@ -487,26 +487,6 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
-            var typingTimer;                
-            var doneTypingInterval = 500;  
-
-            $('#searchInput').on('keyup', function () {
-                clearTimeout(typingTimer);
-                typingTimer = setTimeout(function() {
-                    $('#pageInput').val('1'); 
-                    $('#filterForm').submit();
-                }, doneTypingInterval);
-            });
-
-            $('#searchInput').on('keydown', function () {
-                clearTimeout(typingTimer);
-            });
-
-            $('#gradeFilter').on('change', function() {
-                $('#pageInput').val('1'); 
-                $('#filterForm').submit();
-            });
-
             $(document).on('click', '.js-edit-student', function() {
                 var btn = $(this);
 

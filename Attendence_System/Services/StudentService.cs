@@ -22,6 +22,14 @@ namespace Attendence_System.Services
                 .ToListAsync();
         }
 
+        public async Task<Dictionary<int, int>> GetStudentCountByGradeAsync()
+        {
+            return await _context.Students
+                .GroupBy(s => s.GradeId)
+                .Select(g => new { GradeId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.GradeId, g => g.Count);
+        }
+
         public async Task<Student?> GetStudentByIdAsync(int id)
         {
             return await _context.Students

@@ -5,6 +5,7 @@ namespace Attendence_System.Services
     public interface IGradeService
     {
         Task<List<Grade>> GetAllGradesAsync();
+        Task<List<Grade>> GetAllGradesBasicAsync();
         Task<Grade?> GetGradeByIdAsync(int id);
         Task<bool> AddGradeAsync(Grade grade);
         Task<bool> UpdateGradeAsync(Grade grade);
