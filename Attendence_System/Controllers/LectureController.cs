@@ -59,6 +59,11 @@ namespace Attendence_System.Controllers
 
             var paginatedLectures = await PaginatedList<Lecture>.CreateAsync(query, page, pageSize);
 
+            // Fetch student counts per grade to calculate attendance percentage
+            var allStudents = await _studentService.GetAllStudentsAsync();
+            var studentCountByGrade = allStudents.GroupBy(s => s.GradeId).ToDictionary(g => g.Key, g => g.Count());
+            ViewBag.StudentCountByGrade = studentCountByGrade;
+
             return View(paginatedLectures);
         }
 

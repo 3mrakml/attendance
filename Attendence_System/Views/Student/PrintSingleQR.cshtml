@@ -26,9 +26,11 @@
             flex-direction: row;
             align-items: center;
             justify-content: center;
-            gap: 5vw;
+            gap: 0;
             width: 95vw;
-            height: 90vh;
+            height: 95vh;
+            page-break-inside: avoid;
+            overflow: hidden;
         }
 
         /* ─── Code side (QR or Barcode) ─── */
@@ -40,11 +42,12 @@
         }
 
         .qr-image {
-            width: 90vw;
-            height: 90vw;
-            max-width: 85vh;
-            max-height: 85vh;
+            width: 95vh;
+            height: 95vh;
+            max-width: 100%;
+            max-height: 100%;
             object-fit: contain;
+            transform: scale(1.25); /* تكبير لـ 125% لاقتطاع المزيد من الهوامش البيضاء */
         }
 
         .barcode-image {
@@ -53,27 +56,43 @@
             object-fit: contain;
         }
 
+        .info-wrapper {
+            width: 30vw;
+            height: 95vh;
+            display: flex;
+            align-items: center;
+            justify-content: center; /* نوسط الصندوق الأساسي */
+        }
+
         /* ─── Info side ─── */
         .info-side {
+            width: 95vh; /* نفس طول البطاقة (قبل الدوران) */
+            height: 30vw; /* نفس عرض الصندوق (قبل الدوران) */
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-end; /* لدفع النص نحو الأسفل (الذي سيصبح اليمين بعد الدوران = جهة الباركود) */
+            align-items: flex-start; /* لتبدأ كل النصوص من اليمين (الذي سيصبح الأعلى بعد الدوران) */
             gap: 1.5vh;
             transform: rotate(-90deg);
-            transform-origin: center center;
-            /* compensate so rotated block doesn't overflow */
             white-space: nowrap;
         }
 
+        .info-side > div {
+            overflow: hidden;
+            text-overflow: ellipsis; /* يضع ثلاث نقاط (...) إذا كان الاسم أطول من المساحة */
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
         .qr-name {
-            font-size: clamp(12px, 5vw, 52px);
+            font-size: clamp(10px, 4vw, 42px);
             font-weight: 500;
             color: #000;
             line-height: 1.2;
         }
 
         .qr-token {
-            font-size: clamp(12px, 4vw, 40px);
+            font-size: clamp(10px, 3vw, 32px);
             font-weight: 600;
             color: #000;
             font-family: 'Courier New', monospace;
@@ -83,7 +102,7 @@
         }
 
         .qr-grade {
-            font-size: clamp(10px, 3vw, 32px);
+            font-size: clamp(8px, 2.5vw, 24px);
             color: #000;
             font-weight: 500;
         }
@@ -106,10 +125,12 @@
                 <img src="@ViewBag.QRCode" class="qr-image" alt="QR Code" />
             }
         </div>
-        <div class="info-side">
-            <div class="qr-name">@Model.FullName</div>
-            <div class="qr-token">@Model.QRToken</div>
-            <div class="qr-grade">@Model.Grade?.Name</div>
+        <div class="info-wrapper">
+            <div class="info-side">
+                <div class="qr-name">@Model.FullName</div>
+                <div class="qr-token">@Model.QRToken</div>
+                <div class="qr-grade">@Model.Grade?.Name</div>
+            </div>
         </div>
     </div>
 </body>

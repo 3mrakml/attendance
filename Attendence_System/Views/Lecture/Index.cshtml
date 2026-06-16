@@ -75,7 +75,7 @@
                         <th class="px-6 py-4 text-right text-sm font-bold text-slate-500">المادة</th>
                         <th class="px-6 py-4 text-right text-sm font-bold text-slate-500">الصفوف</th>
                         <th class="px-6 py-4 text-right text-sm font-bold text-slate-500">التاريخ</th>
-                        <th class="px-6 py-4 text-center text-sm font-bold text-slate-500">حالة الحضور</th>
+                        <th class="px-6 py-4 text-center text-sm font-bold text-slate-500">نسبة الحضور</th>
                         <th class="px-6 py-4 text-center text-sm font-bold text-slate-500">إجراءات</th>
                     </tr>
                 </thead>
@@ -86,12 +86,7 @@
                         {
                             <tr class="hover:bg-slate-50/80 transition-colors js-delete-parent">
                                 <td class="px-6 py-4 whitespace-nowrap font-bold text-slate-800">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                                            <i data-lucide="monitor-play" class="w-5 h-5"></i>
-                                        </div>
-                                        <span>@lecture.Title</span>
-                                    </div>
+                                    <span>@lecture.Title</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @if (lecture.Course != null)
@@ -114,25 +109,36 @@
                                     @lecture.DateTime.ToString("yyyy-MM-dd hh:mm tt")
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center">
-                                    @if (lecture.IsAttendanceClosed)
-                                    {
-                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-semibold text-xs border border-slate-200">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                                            مغلق
-                                        </span>
+                                    @{
+                                        int totalStudents = 0;
+                                        if (lecture.LectureGrades != null && ViewBag.StudentCountByGrade != null)
+                                        {
+                                            var counts = ViewBag.StudentCountByGrade as Dictionary<int, int>;
+                                            if (counts != null)
+                                            {
+                                                foreach (var lg in lecture.LectureGrades)
+                                                {
+                                                    if (counts.ContainsKey(lg.GradeId))
+                                                    {
+                                                        totalStudents += counts[lg.GradeId];
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        int attendedCount = lecture.StudentLectures?.Count ?? 0;
+                                        int percentage = totalStudents > 0 ? (int)Math.Round((double)attendedCount / totalStudents * 100) : 0;
+                                        string colorClass = percentage >= 80 ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+                                                            percentage >= 50 ? "bg-amber-100 text-amber-700 border-amber-200" :
+                                                            "bg-rose-100 text-rose-700 border-rose-200";
                                     }
-                                    else
-                                    {
-                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold text-xs border border-emerald-200">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                            مفتوح
-                                        </span>
-                                    }
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full font-bold text-xs border @colorClass">
+                                        @percentage%
+                                    </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center">
                                     <div class="flex items-center justify-center gap-2">
-                                        <a href="@Url.Action("Students", "Lecture", new { id = lecture.LectureId })" class="btn btn-neutral text-xs py-1.5 px-3">
-                                            <i data-lucide="users" class="w-3.5 h-3.5"></i> تفاصيل الحضور
+                                        <a href="@Url.Action("Students", "Lecture", new { id = lecture.LectureId })" class="action-btn action-btn-success" title="تفاصيل الحضور">
+                                            <i data-lucide="eye" class="w-4 h-4"></i>
                                         </a>
                                         <button type="button" class="action-btn action-btn-primary js-edit-lecture" 
                                                 data-id="@lecture.LectureId" 

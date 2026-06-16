@@ -105,6 +105,7 @@ namespace Attendence_System.Services
             return _context.Lectures
                 .AsNoTracking()
                 .Include(l => l.Course)
+                .Include(l => l.StudentLectures)
                 .Include(l => l.LectureGrades)
                     .ThenInclude(lg => lg.Grade)
                 .OrderByDescending(l => l.DateTime)

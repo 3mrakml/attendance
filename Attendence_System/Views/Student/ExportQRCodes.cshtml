@@ -46,12 +46,18 @@
             flex-direction: row;
             align-items: center;
             justify-content: center;
-            gap: 5vw;
+            gap: 0;
             width: 100vw;
-            height: 100vh;
+            height: 98vh; /* تجنب كسر الصفحة بسبب ارتفاع 100vh بالضبط */
             overflow: hidden;
             page-break-after: always;
             break-after: page;
+            page-break-inside: avoid;
+        }
+
+        .print-page:last-of-type {
+            page-break-after: auto;
+            break-after: auto;
         }
 
         /* ─── Code side ─── */
@@ -63,11 +69,12 @@
         }
 
         .qr-image {
-            width: 90vw;
-            height: 90vw;
-            max-width: 85vh;
-            max-height: 85vh;
+            width: 95vh;
+            height: 95vh;
+            max-width: 100%;
+            max-height: 100%;
             object-fit: contain;
+            transform: scale(1.25); /* تكبير لـ 125% لاقتطاع المزيد من الهوامش البيضاء */
         }
 
         .barcode-image {
@@ -76,26 +83,43 @@
             object-fit: contain;
         }
 
+        .info-wrapper {
+            width: 30vw;
+            height: 98vh;
+            display: flex;
+            align-items: center;
+            justify-content: center; /* نوسط الصندوق الأساسي */
+        }
+
         /* ─── Info side ─── */
         .info-side {
+            width: 98vh; /* نفس طول الصفحة */
+            height: 30vw; /* نفس عرض الصندوق */
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-end; /* لدفع النص للباركود */
+            align-items: flex-start; /* لتثبيت البداية من الأعلى */
             gap: 1.5vh;
             transform: rotate(-90deg);
-            transform-origin: center center;
             white-space: nowrap;
         }
 
+        .info-side > div {
+            overflow: hidden;
+            text-overflow: ellipsis; /* يضع ثلاث نقاط (...) إذا كان الاسم أطول من المساحة */
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
         .qr-name {
-            font-size: clamp(12PX, 5vw, 52px);
+            font-size: clamp(10px, 4vw, 42px);
             font-weight: 500;
             color: #000;
             line-height: 1.2;
         }
 
         .qr-token {
-            font-size: clamp(12px, 4vw, 40px);
+            font-size: clamp(10px, 3vw, 32px);
             font-weight: 600;
             color: #000;
             font-family: 'Courier New', monospace;
@@ -105,7 +129,7 @@
         }
 
         .qr-grade {
-            font-size: clamp(10px, 3vw, 32px);
+            font-size: clamp(8px, 2.5vw, 24px);
             color: #000;
             font-weight: 500;
         }
@@ -143,10 +167,12 @@
                     <img src="@Url.Action("DownloadCode", "Student", new { id = student.StudentId })" class="qr-image" alt="QR Code" />
                 }
             </div>
-            <div class="info-side">
-                <div class="qr-name">@student.FullName</div>
-                <div class="qr-token">@student.QRToken</div>
-                <div class="qr-grade">@student.Grade?.Name</div>
+            <div class="info-wrapper">
+                <div class="info-side">
+                    <div class="qr-name">@student.FullName</div>
+                    <div class="qr-token">@student.QRToken</div>
+                    <div class="qr-grade">@student.Grade?.Name</div>
+                </div>
             </div>
         </div>
     }
