@@ -14,10 +14,16 @@
             <button type="button" onclick="document.getElementById('importStudentModal').classList.remove('hidden')" class="btn btn-neutral">
                 <i data-lucide="file-up" class="w-4 h-4"></i> استيراد من Excel
             </button>
-            <a href="@Url.Action("PrintAllCards", "Student")" target="_blank" class="btn btn-neutral">
+            <button type="button" id="btnToggleSelection" class="btn btn-neutral">
+                <i data-lucide="check-square" class="w-4 h-4"></i> تحديد
+            </button>
+            <button type="submit" form="printSelectedForm" id="btnPrintSelected" class="btn btn-neutral text-primary border-primary/20 hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed hidden" disabled>
+                <i data-lucide="qr-code" class="w-4 h-4"></i> تصدير المحددين (<span id="selectedCount">0</span>)
+            </button>
+            <a href="@Url.Action("PrintAllCards", "Student", new { searchString = ViewBag.SearchString, gradeId = ViewBag.GradeId })" target="_blank" class="btn btn-neutral">
                 <i data-lucide="id-card" class="w-4 h-4"></i> طباعة كل الكروت
             </a>
-            <a href="@Url.Action("ExportQRCodes", "Student")" target="_blank" class="btn btn-neutral">
+            <a href="@Url.Action("ExportQRCodes", "Student", new { searchString = ViewBag.SearchString, gradeId = ViewBag.GradeId })" target="_blank" class="btn btn-neutral">
                 <i data-lucide="qr-code" class="w-4 h-4"></i> تصدير QR Codes
             </a>
             <button type="button" onclick="document.getElementById('addStudentModal').classList.remove('hidden')" class="btn btn-primary">
@@ -73,7 +79,7 @@
     }
 
     <!-- Filters Section -->
-    <form id="filterForm" method="get" asp-action="Index" class="js-auto-filter bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4">
+    <form id="filterForm" method="get" asp-action="Index" class="js-auto-filter bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4" data-live-target="#studentsTable">
         <div class="flex-1 relative">
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
@@ -109,12 +115,16 @@
     </form>
 
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-100">
-                <thead class="bg-slate-50/50">
-                    <tr>
-                        <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">#</th>
-                        <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الاسم بالكامل</th>
+        <form id="printSelectedForm" method="post" action="@Url.Action("PrintSelectedQRCodes", "Student")" target="_blank">
+            <div class="overflow-x-auto">
+                <table id="studentsTable" class="min-w-full divide-y divide-slate-100">
+                    <thead class="bg-slate-50/50">
+                        <tr>
+                            <th scope="col" class="px-6 py-4 text-right selection-col hidden">
+                                <input type="checkbox" id="selectAllCheckbox" class="w-4 h-4 text-primary bg-white border-slate-300 rounded focus:ring-primary focus:ring-2 cursor-pointer transition-colors" />
+                            </th>
+                            <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">#</th>
+                            <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الاسم بالكامل</th>
                         <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الفرقة/الصف</th>
                         <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">نسبة الحضور</th>
                         <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">كود الطالب</th>
@@ -127,7 +137,11 @@
                         int currentIndex = ((ViewBag.CurrentPage ?? 1) - 1) * 50 + 1;
                         @foreach (var item in Model)
                         {
-                            <tr class="hover:bg-slate-50/80 transition-colors group js-delete-parent">
+                            <tr class="hover:bg-slate-50/80 transition-colors group js-delete-parent"
+                                data-search="@($"{item.FullName} {item.QRToken} {item.PhoneNumber}")" >
+                                <td class="px-6 py-4 whitespace-nowrap selection-col hidden">
+                                    <input type="checkbox" name="studentIds" value="@item.StudentId" class="student-checkbox w-4 h-4 text-primary bg-white border-slate-300 rounded focus:ring-primary focus:ring-2 cursor-pointer transition-colors" />
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium">@(currentIndex++)</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <a asp-action="Report" asp-route-id="@item.StudentId" class="flex items-center hover:bg-slate-50 p-2 -ml-2 rounded-xl transition-colors group/link cursor-pointer">
@@ -189,7 +203,7 @@
                                                 title="تعديل الطالب">
                                             <i data-lucide="pencil" class="w-4 h-4"></i>
                                         </button>
-                                        <button class="action-btn action-btn-danger js-delete" data-id="@item.StudentId" data-type="student" title="حذف الطالب">
+                                        <button type="button" class="action-btn action-btn-danger js-delete" data-id="@item.StudentId" data-type="student" title="حذف الطالب">
                                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                                         </button>
                                     </div>
@@ -199,19 +213,20 @@
                     }
                     else
                     {
-                        <tr>
-                            <td colspan="6" class="px-6 py-16 text-center">
+                        <tr class="js-empty-row" style="display:none">
+                            <td colspan="7" class="px-6 py-16 text-center">
                                 <div class="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">
-                                    <i data-lucide="users" class="w-8 h-8"></i>
+                                    <i data-lucide="search" class="w-8 h-8"></i>
                                 </div>
-                                <h3 class="text-lg font-bold text-slate-700">لا يوجد طلاب مضافين بعد</h3>
-                                <p class="text-slate-500 mt-1 max-w-sm mx-auto">قم بإضافة الطلاب الجدد وسجل بياناتهم الأكاديمية لاستخراج رموز الحضور الخاصة بهم.</p>
+                                <h3 class="text-lg font-bold text-slate-700">لا توجد نتائج</h3>
+                                <p class="text-slate-500 mt-1 max-w-sm mx-auto">لا يوجد طالب يطابق نص البحث.</p>
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
+        </form>
     </div>
 
     <!-- Pagination -->
@@ -613,6 +628,60 @@
 
             $('#EditAge').on('change keyup', function() {
                 autoSelectGrade($(this).val(), '#EditGradeId');
+            });
+        });
+        // Checkbox and selection logic
+        const btnToggleSelection = document.getElementById('btnToggleSelection');
+        const selectionCols = document.querySelectorAll('.selection-col');
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+        const btnPrintSelected = document.getElementById('btnPrintSelected');
+        const selectedCountSpan = document.getElementById('selectedCount');
+
+        if (btnToggleSelection) {
+            btnToggleSelection.addEventListener('click', function () {
+                const isHidden = btnPrintSelected.classList.contains('hidden');
+                if (isHidden) {
+                    btnPrintSelected.classList.remove('hidden');
+                    selectionCols.forEach(col => col.classList.remove('hidden'));
+                    this.classList.add('bg-primary/10', 'text-primary', 'border-primary/20');
+                } else {
+                    btnPrintSelected.classList.add('hidden');
+                    selectionCols.forEach(col => col.classList.add('hidden'));
+                    this.classList.remove('bg-primary/10', 'text-primary', 'border-primary/20');
+                    
+                    // Uncheck everything when hiding
+                    if (selectAllCheckbox) selectAllCheckbox.checked = false;
+                    studentCheckboxes.forEach(cb => cb.checked = false);
+                    updatePrintButtonState();
+                }
+            });
+        }
+
+        function updatePrintButtonState() {
+            const checkedCount = document.querySelectorAll('.student-checkbox:checked').length;
+            selectedCountSpan.textContent = checkedCount;
+            if (checkedCount > 0) {
+                btnPrintSelected.removeAttribute('disabled');
+            } else {
+                btnPrintSelected.setAttribute('disabled', 'disabled');
+            }
+        }
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function () {
+                studentCheckboxes.forEach(cb => {
+                    cb.checked = this.checked;
+                });
+                updatePrintButtonState();
+            });
+        }
+
+        studentCheckboxes.forEach(cb => {
+            cb.addEventListener('change', function () {
+                const allChecked = document.querySelectorAll('.student-checkbox:checked').length === studentCheckboxes.length;
+                selectAllCheckbox.checked = allChecked;
+                updatePrintButtonState();
             });
         });
     </script>

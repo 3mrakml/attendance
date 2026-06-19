@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Attendence_System.Controllers
 {
@@ -15,77 +16,52 @@ namespace Attendence_System.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IQRCodeService _qrCodeService;
         private readonly UserManager<AppUser> _userManager;
+        private readonly IMemoryCache _cache;
 
         public PublicController(
             ApplicationDbContext context,
             IQRCodeService qrCodeService,
-            UserManager<AppUser> userManager)
+            UserManager<AppUser> userManager,
+            IMemoryCache cache)
         {
             _context = context;
             _qrCodeService = qrCodeService;
             _userManager = userManager;
+            _cache = cache;
         }
 
         [HttpGet]
         public async Task<IActionResult> Register(string tenantId)
         {
             if (string.IsNullOrEmpty(tenantId)) return NotFound("Tenant ID is required.");
+
+            // ── Run queries sequentially to prevent EF Core concurrency exception on single DbContext ──
+            var settingKeys = new[]
+            {
+                "IsRegistrationOpen", "AgeReferenceDate", "ShowPhoneNumberField",
+                "ShowDateOfBirthField", "ShowAgeField", "ShowGradeField"
+            };
+
             var tenantExists = await _context.Tenants.AnyAsync(t => t.Id == tenantId);
+            var grades       = await _context.Grades.IgnoreQueryFilters().Where(g => g.TenantId == tenantId).ToListAsync();
+            var settings     = await _context.SystemSettings.IgnoreQueryFilters()
+                                 .Where(s => s.TenantId == tenantId && settingKeys.Contains(s.Key))
+                                 .ToDictionaryAsync(s => s.Key, s => s.Value);
+
             if (!tenantExists) return NotFound("Teacher not found.");
 
-            // Load settings for this specific tenant (bypass global filter)
-            var isRegistrationOpenStr = await _context.SystemSettings
-                .IgnoreQueryFilters()
-                .Where(s => s.TenantId == tenantId && s.Key == "IsRegistrationOpen")
-                .Select(s => s.Value)
-                .FirstOrDefaultAsync() ?? "false";
+            string Get(string key, string def) => settings.TryGetValue(key, out var v) ? v : def;
 
-            if (isRegistrationOpenStr != "true")
+            if (Get("IsRegistrationOpen", "false") != "true")
                 return View("RegistrationClosed");
 
-            // Load grades for this specific tenant (bypass global filter)
-            var grades = await _context.Grades
-                .IgnoreQueryFilters()
-                .Where(g => g.TenantId == tenantId)
-                .ToListAsync();
-
-            var ageReferenceDateStr = await _context.SystemSettings
-                .IgnoreQueryFilters()
-                .Where(s => s.TenantId == tenantId && s.Key == "AgeReferenceDate")
-                .Select(s => s.Value)
-                .FirstOrDefaultAsync();
-
-            var showPhoneNumberFieldStr = await _context.SystemSettings
-                .IgnoreQueryFilters()
-                .Where(s => s.TenantId == tenantId && s.Key == "ShowPhoneNumberField")
-                .Select(s => s.Value)
-                .FirstOrDefaultAsync() ?? "true";
-
-            var showDateOfBirthFieldStr = await _context.SystemSettings
-                .IgnoreQueryFilters()
-                .Where(s => s.TenantId == tenantId && s.Key == "ShowDateOfBirthField")
-                .Select(s => s.Value)
-                .FirstOrDefaultAsync() ?? "true";
-
-            var showAgeFieldStr = await _context.SystemSettings
-                .IgnoreQueryFilters()
-                .Where(s => s.TenantId == tenantId && s.Key == "ShowAgeField")
-                .Select(s => s.Value)
-                .FirstOrDefaultAsync() ?? "true";
-
-            var showGradeFieldStr = await _context.SystemSettings
-                .IgnoreQueryFilters()
-                .Where(s => s.TenantId == tenantId && s.Key == "ShowGradeField")
-                .Select(s => s.Value)
-                .FirstOrDefaultAsync() ?? "true";
-
-            ViewBag.TenantId = tenantId;
-            ViewBag.Grades = grades;
-            ViewBag.AgeReferenceDate = ageReferenceDateStr;
-            ViewBag.ShowPhoneNumberField = showPhoneNumberFieldStr == "true";
-            ViewBag.ShowDateOfBirthField = showDateOfBirthFieldStr == "true";
-            ViewBag.ShowAgeField = showAgeFieldStr == "true";
-            ViewBag.ShowGradeField = showGradeFieldStr == "true";
+            ViewBag.TenantId              = tenantId;
+            ViewBag.Grades                = grades;
+            ViewBag.AgeReferenceDate      = Get("AgeReferenceDate", null!);
+            ViewBag.ShowPhoneNumberField   = Get("ShowPhoneNumberField", "true") == "true";
+            ViewBag.ShowDateOfBirthField   = Get("ShowDateOfBirthField", "true") == "true";
+            ViewBag.ShowAgeField           = Get("ShowAgeField", "true") == "true";
+            ViewBag.ShowGradeField         = Get("ShowGradeField", "true") == "true";
             return View();
         }
 
@@ -133,42 +109,25 @@ namespace Attendence_System.Controllers
 
             if (!ModelState.IsValid)
             {
-                var grades = await _context.Grades
-                    .IgnoreQueryFilters()
-                    .Where(g => g.TenantId == tenantId)
-                    .ToListAsync();
+                // ── Reload form data with batched parallel queries ──
+                var reloadSettingKeys = new[]
+                {
+                    "AgeReferenceDate", "ShowPhoneNumberField",
+                    "ShowDateOfBirthField", "ShowAgeField"
+                };
+                var grades = await _context.Grades.IgnoreQueryFilters().Where(g => g.TenantId == tenantId).ToListAsync();
+                var rs     = await _context.SystemSettings.IgnoreQueryFilters()
+                                 .Where(s => s.TenantId == tenantId && reloadSettingKeys.Contains(s.Key))
+                                 .ToDictionaryAsync(s => s.Key, s => s.Value);
+                string RGet(string key, string def) => rs.TryGetValue(key, out var v) ? v : def;
 
-                var ageReferenceDateStr = await _context.SystemSettings
-                    .IgnoreQueryFilters()
-                    .Where(s => s.TenantId == tenantId && s.Key == "AgeReferenceDate")
-                    .Select(s => s.Value)
-                    .FirstOrDefaultAsync();
-
-                var showPhoneNumberFieldStr = await _context.SystemSettings
-                    .IgnoreQueryFilters()
-                    .Where(s => s.TenantId == tenantId && s.Key == "ShowPhoneNumberField")
-                    .Select(s => s.Value)
-                    .FirstOrDefaultAsync() ?? "true";
-
-                var showDateOfBirthFieldStr = await _context.SystemSettings
-                    .IgnoreQueryFilters()
-                    .Where(s => s.TenantId == tenantId && s.Key == "ShowDateOfBirthField")
-                    .Select(s => s.Value)
-                    .FirstOrDefaultAsync() ?? "true";
-
-                var showAgeFieldStr = await _context.SystemSettings
-                    .IgnoreQueryFilters()
-                    .Where(s => s.TenantId == tenantId && s.Key == "ShowAgeField")
-                    .Select(s => s.Value)
-                    .FirstOrDefaultAsync() ?? "true";
-
-                ViewBag.TenantId = tenantId;
-                ViewBag.Grades = grades;
-                ViewBag.AgeReferenceDate = ageReferenceDateStr;
-                ViewBag.ShowPhoneNumberField = showPhoneNumberFieldStr == "true";
-                ViewBag.ShowDateOfBirthField = showDateOfBirthFieldStr == "true";
-                ViewBag.ShowAgeField = showAgeFieldStr == "true";
-                ViewBag.ShowGradeField = showGradeFieldStr == "true";
+                ViewBag.TenantId             = tenantId;
+                ViewBag.Grades               = grades;
+                ViewBag.AgeReferenceDate      = RGet("AgeReferenceDate", null!);
+                ViewBag.ShowPhoneNumberField   = RGet("ShowPhoneNumberField", "true") == "true";
+                ViewBag.ShowDateOfBirthField   = RGet("ShowDateOfBirthField", "true") == "true";
+                ViewBag.ShowAgeField           = RGet("ShowAgeField", "true") == "true";
+                ViewBag.ShowGradeField         = showGradeFieldStr == "true";
                 return View(model);
             }
 
@@ -220,6 +179,11 @@ namespace Attendence_System.Controllers
 
             _context.Students.Add(model);
             await _context.SaveChangesAsync();
+
+            // Clear cache so the student appears immediately in Student Management
+            _cache.Remove($"students_index_{tenantId}");
+            _cache.Remove($"attendance_perc_{tenantId}");
+            _cache.Remove($"comprehensive_report_{tenantId}");
 
             return RedirectToAction("RegistrationSuccess", new { tenantId, id = model.StudentId });
         }
@@ -316,55 +280,66 @@ namespace Attendence_System.Controllers
                 return View();
             }
 
-            // Load exams and scores for this student
+            // ── Run queries sequentially to prevent EF Core concurrency exception ──
             var studentExams = await _context.StudentExams
                 .IgnoreQueryFilters()
-                .Include(se => se.Exam)
-                    .ThenInclude(e => e!.Course)
-                .Include(se => se.Exam)
-                    .ThenInclude(e => e!.Grade)
+                .Include(se => se.Exam).ThenInclude(e => e!.Course)
+                .Include(se => se.Exam).ThenInclude(e => e!.Grade)
                 .Where(se => se.StudentId == student.StudentId)
                 .OrderByDescending(se => se.Exam!.Date)
                 .ToListAsync();
 
-            // Get all lectures for the student's grade
-            var allGradeLectures = await _context.Lectures
+            var topLectures = await _context.Lectures
                 .IgnoreQueryFilters()
-                .Include(l => l.Course)
-                .Where(l => l.Course.TenantId == tenantId && l.LectureGrades.Any(lg => lg.GradeId == student.GradeId))
+                .Where(l => l.Course.TenantId == tenantId &&
+                            l.LectureGrades.Any(lg => lg.GradeId == student.GradeId))
                 .OrderByDescending(l => l.DateTime)
+                .Select(l => new { l.LectureId, CourseName = l.Course != null ? l.Course.Name : null, l.DateTime })
+                .Take(10)
                 .ToListAsync();
 
-            // Get the IDs of the lectures the student attended
+            var totalLecturesCount = await _context.LectureGrades
+                .IgnoreQueryFilters()
+                .Where(lg => lg.GradeId == student.GradeId &&
+                             lg.Lecture.Course.TenantId == tenantId)
+                .CountAsync();
+
             var attendedLectureIds = await _context.StudentLectures
                 .IgnoreQueryFilters()
                 .Where(sl => sl.StudentId == student.StudentId)
                 .Select(sl => sl.LectureId)
                 .ToListAsync();
 
-            ViewBag.StudentExams = studentExams;
-            ViewBag.AllLectures = allGradeLectures;
-            ViewBag.AttendedLectureIds = attendedLectureIds;
-            
-            int totalLecturesCount = allGradeLectures.Count;
-            int attendedLecturesCount = attendedLectureIds.Count;
-            
-            ViewBag.TotalLectures = totalLecturesCount;
-            ViewBag.AttendedLectures = attendedLecturesCount;
-
-            string settingKey = $"Grade_{student.GradeId}_Marks";
-            string valStr = await _context.SystemSettings
+            var settingKey = $"Grade_{student.GradeId}_Marks";
+            var marksStr = await _context.SystemSettings
                 .IgnoreQueryFilters()
                 .Where(s => s.TenantId == tenantId && s.Key == settingKey)
                 .Select(s => s.Value)
-                .FirstOrDefaultAsync() ?? "10";
+                .FirstOrDefaultAsync();
 
-            double attendanceMaxMarks = double.TryParse(valStr, out var parsed) ? parsed : 10;
-            double attendancePercentage = totalLecturesCount > 0 ? ((double)attendedLecturesCount / totalLecturesCount) * 100 : 0;
+            var attendedLecturesCount = attendedLectureIds.Count;
+
+            // Convert projection to Lecture-like objects for the view
+            var allGradeLectures = topLectures.Select(l => new Attendence_System.Models.Lecture
+            {
+                LectureId = l.LectureId,
+                DateTime  = l.DateTime,
+                Course    = l.CourseName != null ? new Attendence_System.Models.Course { Name = l.CourseName } : null
+            }).ToList();
+
+            ViewBag.StudentExams       = studentExams;
+            ViewBag.AllLectures        = allGradeLectures;
+            ViewBag.AttendedLectureIds = attendedLectureIds;
+            ViewBag.TotalLectures      = totalLecturesCount;
+            ViewBag.AttendedLectures   = attendedLecturesCount;
+
+            double attendanceMaxMarks  = double.TryParse(marksStr, out var parsed) ? parsed : 10;
+            double attendancePercentage = totalLecturesCount > 0
+                ? ((double)attendedLecturesCount / totalLecturesCount) * 100 : 0;
             double attendanceScore = Math.Round((attendancePercentage / 100.0) * attendanceMaxMarks, 2);
 
             ViewBag.AttendanceMaxMarks = attendanceMaxMarks;
-            ViewBag.AttendanceScore = attendanceScore;
+            ViewBag.AttendanceScore    = attendanceScore;
 
             return View("GradesResult", student);
         }

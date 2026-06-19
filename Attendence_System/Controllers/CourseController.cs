@@ -3,11 +3,14 @@ using Attendence_System.Services;
 using Attendence_System.ViewModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using System.Security.Claims;
+using Attendence_System.Filters;
 
 namespace Attendence_System.Controllers
 {
     [Authorize]
+    [AutoClearStudentCache]
     public class CourseController : Controller
     {
         private readonly ICourseService _courseService;
@@ -15,19 +18,22 @@ namespace Attendence_System.Controllers
         private readonly IStudentService _studentService;
         private readonly IGradeService _gradeService;
         private readonly IExcelService _excelService;
+        private readonly IMemoryCache _cache;
 
         public CourseController(
             ICourseService courseService,
             ILectureService lectureService,
             IStudentService studentService,
             IGradeService gradeService,
-            IExcelService excelService)
+            IExcelService excelService,
+            IMemoryCache cache)
         {
-            _courseService = courseService;
+            _courseService  = courseService;
             _lectureService = lectureService;
             _studentService = studentService;
-            _gradeService = gradeService;
-            _excelService = excelService;
+            _gradeService   = gradeService;
+            _excelService   = excelService;
+            _cache          = cache;
         }
 
         // ─── Courses ───────────────────────────────────────────────────────────
@@ -125,6 +131,10 @@ namespace Attendence_System.Controllers
             var success = await _lectureService.DeleteLectureAsync(id);
             if (!success)
                 return Json(new { success = false, message = "Lecture not found" });
+
+            // Invalidate lecture cache for the current tenant
+            var tenantId = User.FindFirstValue("TenantId") ?? "";
+            _cache.Remove($"lectures_all_{tenantId}");
 
             return Json(new { success = true, message = "Lecture deleted successfully" });
         }

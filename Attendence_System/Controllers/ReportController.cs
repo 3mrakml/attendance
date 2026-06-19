@@ -35,18 +35,21 @@ namespace Attendence_System.Controllers
         private async Task<List<StudentReportItem>> GetCachedReportAsync(int? gradeId)
         {
             var tenantId = User.FindFirstValue("TenantId");
-            string cacheKey = $"comprehensive_report_{tenantId}_{(gradeId.HasValue ? gradeId.Value.ToString() : "all")}";
+            string cacheKey = $"comprehensive_report_{tenantId}";
 
             if (!_cache.TryGetValue(cacheKey, out List<StudentReportItem>? studentsReport) || studentsReport == null)
             {
-                studentsReport = await _studentService.GetComprehensiveReportAsync(gradeId);
+                studentsReport = await _studentService.GetComprehensiveReportAsync(null);
                 var grades = await _gradeService.GetAllGradesAsync();
+
+                var settingKeys = grades.Select(g => $"Grade_{g.GradeId}_Marks").ToList();
+                var settingsDict = await _settingService.GetSettingsAsync(settingKeys);
 
                 var gradeSettings = new Dictionary<int, double>();
                 foreach (var grade in grades)
                 {
                     string key = $"Grade_{grade.GradeId}_Marks";
-                    string valStr = await _settingService.GetSettingAsync(key, "10");
+                    string valStr = settingsDict.TryGetValue(key, out var v) ? v : "10";
                     gradeSettings[grade.GradeId] = double.TryParse(valStr, out var parsed) ? parsed : 10;
                 }
 
@@ -57,6 +60,11 @@ namespace Attendence_System.Controllers
                 }
 
                 _cache.Set(cacheKey, studentsReport, TimeSpan.FromMinutes(5));
+            }
+
+            if (gradeId.HasValue)
+            {
+                return studentsReport.Where(s => s.GradeId == gradeId.Value).ToList();
             }
 
             return studentsReport;
@@ -99,11 +107,14 @@ namespace Attendence_System.Controllers
             var (paginatedStudents, paginationInfo) = studentsReport.Paginate(page, 50, "Index", "Report", routeParams);
 
             var grades = await _gradeService.GetAllGradesAsync();
+            var settingKeys = grades.Select(g => $"Grade_{g.GradeId}_Marks").ToList();
+            var settingsDict = await _settingService.GetSettingsAsync(settingKeys);
+
             var gradeSettings = new List<GradeMarksViewModel>();
             foreach (var grade in grades)
             {
                 string key = $"Grade_{grade.GradeId}_Marks";
-                string valStr = await _settingService.GetSettingAsync(key, "10");
+                string valStr = settingsDict.TryGetValue(key, out var v) ? v : "10";
                 gradeSettings.Add(new GradeMarksViewModel
                 {
                     GradeId = grade.GradeId,

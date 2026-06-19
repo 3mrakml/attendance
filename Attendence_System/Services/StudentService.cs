@@ -168,25 +168,20 @@ namespace Attendence_System.Services
 
         public async Task<List<StudentWithCount>> GetCourseAttendanceStatsAsync(int courseId)
         {
-            var lectures = await _context.Lectures
-                .Include(l => l.StudentLectures)
-                    .ThenInclude(ls => ls.Student)
-                .Where(d => d.CourseId == courseId)
-                .ToListAsync();
-
-            var studentsWithCount = lectures
-                .SelectMany(l => l.StudentLectures)
-                .GroupBy(ls => ls.Student.QRToken)
+            var stats = await _context.StudentLectures
+                .Where(sl => sl.Lecture.CourseId == courseId)
+                .GroupBy(sl => new { sl.StudentId, sl.Student.FullName, sl.Student.QRToken, sl.Student.Age })
                 .Select(g => new StudentWithCount
                 {
-                    StudentId = g.First().Student.StudentId,
-                    FullName = g.First().Student.FullName,
-                    QRToken = g.Key,
-                    Age = g.First().Student.Age,
+                    StudentId = g.Key.StudentId,
+                    FullName = g.Key.FullName,
+                    QRToken = g.Key.QRToken,
+                    Age = g.Key.Age,
                     Count = g.Count()
-                }).ToList();
+                })
+                .ToListAsync();
 
-            return studentsWithCount;
+            return stats;
         }
 
         public async Task<StudentReportViewModel?> GetStudentReportAsync(int studentId)

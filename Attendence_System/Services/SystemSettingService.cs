@@ -23,6 +23,14 @@ namespace Attendence_System.Services
             return setting?.Value ?? defaultValue;
         }
 
+        public async Task<Dictionary<string, string>> GetSettingsAsync(IEnumerable<string> keys)
+        {
+            var keysList = keys.ToList();
+            return await _context.SystemSettings
+                .Where(s => keysList.Contains(s.Key))
+                .ToDictionaryAsync(s => s.Key, s => s.Value);
+        }
+
         public async Task SetSettingAsync(string key, string value)
         {
             var tenantId = _httpContextAccessor.HttpContext?.User?.FindFirstValue("TenantId");

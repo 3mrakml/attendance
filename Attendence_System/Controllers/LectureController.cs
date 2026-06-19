@@ -4,6 +4,8 @@ using Attendence_System.ViewModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System.Security.Claims;
 using Attendence_System.Filters;
 using Attendence_System.Extensions;
@@ -19,19 +21,22 @@ namespace Attendence_System.Controllers
         private readonly IStudentService _studentService;
         private readonly IGradeService _gradeService;
         private readonly IExcelService _excelService;
+        private readonly IMemoryCache _cache;
 
         public LectureController(
             ILectureService lectureService,
             ICourseService courseService,
             IStudentService studentService,
             IGradeService gradeService,
-            IExcelService excelService)
+            IExcelService excelService,
+            IMemoryCache cache)
         {
             _lectureService = lectureService;
-            _courseService = courseService;
+            _courseService  = courseService;
             _studentService = studentService;
-            _gradeService = gradeService;
-            _excelService = excelService;
+            _gradeService   = gradeService;
+            _excelService   = excelService;
+            _cache          = cache;
         }
 
         // ─── List Lectures (Index) ─────────────────────────────────────────────
@@ -39,34 +44,52 @@ namespace Attendence_System.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(string search, int? gradeId, int page = 1)
         {
-            ViewBag.CurrentSearch = search;
+            ViewBag.CurrentSearch  = search;
             ViewBag.CurrentGradeId = gradeId;
             ViewBag.Grades = await _gradeService.GetAllGradesBasicAsync();
 
             int pageSize = 20;
 
-            var query = _lectureService.GetAllLecturesQueryable();
+            // ── Cache all lectures for 10 minutes to avoid reloading on every request ──
+            var tenantId = User.FindFirstValue("TenantId") ?? "";
+            string cacheKey = $"lectures_all_{tenantId}";
+
+            if (!_cache.TryGetValue(cacheKey, out List<Lecture>? allLectures) || allLectures == null)
+            {
+                allLectures = await _lectureService.GetAllLecturesQueryable().ToListAsync();
+                _cache.Set(cacheKey, allLectures, TimeSpan.FromMinutes(10));
+            }
+
+            IEnumerable<Lecture> filteredLectures = allLectures;
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(l => l.Title.Contains(search) || (l.Course != null && l.Course.Name.Contains(search)));
+                filteredLectures = filteredLectures.Where(l =>
+                    l.Title.ContainsArabicFuzzy(search) ||
+                    (l.Course != null && l.Course.Name.ContainsArabicFuzzy(search)));
             }
 
             if (gradeId.HasValue)
             {
-                query = query.Where(l => l.LectureGrades.Any(lg => lg.GradeId == gradeId.Value));
+                filteredLectures = filteredLectures.Where(l =>
+                    l.LectureGrades.Any(lg => lg.GradeId == gradeId.Value));
             }
 
-            var paginatedLectures = await PaginatedList<Lecture>.CreateAsync(query, page, pageSize);
+            int totalCount  = filteredLectures.Count();
+            var pagedItems  = filteredLectures
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
 
-            // Fetch student counts per grade to calculate attendance percentage via optimized SQL
+            var paginatedLectures = new PaginatedList<Lecture>(pagedItems, totalCount, page, pageSize);
+
+            // Fetch student counts + attended counts sequentially to avoid EF Core concurrency issues on the same DbContext
+            var lectureIds = pagedItems.Select(l => l.LectureId).ToList();
             var studentCountByGrade = await _studentService.GetStudentCountByGradeAsync();
-            ViewBag.StudentCountByGrade = studentCountByGrade;
-
-            // Fetch attended counts for the paginated lectures only
-            var lectureIds = paginatedLectures.Select(l => l.LectureId).ToList();
             var attendedCounts = await _lectureService.GetAttendedCountsForLecturesAsync(lectureIds);
-            ViewBag.AttendedCounts = attendedCounts;
+
+            ViewBag.StudentCountByGrade = studentCountByGrade;
+            ViewBag.AttendedCounts      = attendedCounts;
 
             return View(paginatedLectures);
         }
@@ -89,8 +112,15 @@ namespace Attendence_System.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            InvalidateLectureCache();
             TempData["SuccessMessage"] = "تم تعديل اسم المحاضرة بنجاح.";
             return RedirectToAction(nameof(Index));
+        }
+
+        private void InvalidateLectureCache()
+        {
+            var tenantId = User.FindFirstValue("TenantId") ?? "";
+            _cache.Remove($"lectures_all_{tenantId}");
         }
 
         // ─── Create Lecture ────────────────────────────────────────────────────
@@ -160,6 +190,7 @@ namespace Attendence_System.Controllers
 
             lecture = await _lectureService.CreateLectureAsync(lecture, model.GradeIds!);
 
+            InvalidateLectureCache();
             return RedirectToAction("Scan", new { id = lecture.LectureId });
         }
 
@@ -167,6 +198,7 @@ namespace Attendence_System.Controllers
         public async Task<IActionResult> CloseAttendance(int id)
         {
             await _lectureService.CloseAttendanceAsync(id);
+            InvalidateLectureCache();
             return RedirectToAction(nameof(Students), new { id });
         }
 

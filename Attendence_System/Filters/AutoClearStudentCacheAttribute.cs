@@ -21,6 +21,7 @@ namespace Attendence_System.Filters
                     cache.Remove($"students_index_{tenantId}");
                     cache.Remove($"attendance_perc_{tenantId}");
                     cache.Remove($"comprehensive_report_{tenantId}");
+                    cache.Remove($"lectures_all_{tenantId}");
                 }
             }
             base.OnActionExecuted(context);

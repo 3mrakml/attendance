@@ -1,6 +1,7 @@
 using Attendence_System.Models;
 using Attendence_System.Services;
 using Attendence_System.Filters;
+using Attendence_System.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -58,8 +59,8 @@ namespace Attendence_System.Controllers
             var filteredStudents = allStudents.AsEnumerable();
             if (!string.IsNullOrEmpty(searchString))
             {
-                filteredStudents = filteredStudents.Where(s => 
-                    (s.FullName != null && s.FullName.Contains(searchString, StringComparison.OrdinalIgnoreCase)) ||
+                filteredStudents = filteredStudents.Where(s =>
+                    s.FullName.ContainsArabicFuzzy(searchString) ||
                     (s.QRToken != null && s.QRToken.Contains(searchString, StringComparison.OrdinalIgnoreCase)) ||
                     (s.PhoneNumber != null && s.PhoneNumber.Contains(searchString, StringComparison.OrdinalIgnoreCase))
                 );
@@ -187,27 +188,72 @@ namespace Attendence_System.Controllers
         // ─── Print All Cards ───────────────────────────────────────────────────
 
         [HttpGet]
-        public async Task<IActionResult> PrintAllCards()
+        public async Task<IActionResult> PrintAllCards(string searchString, int? gradeId)
         {
             var students = await _studentService.GetAllStudentsAsync();
+
+            var filteredStudents = students.AsEnumerable();
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                filteredStudents = filteredStudents.Where(s =>
+                    s.FullName.ContainsArabicFuzzy(searchString) ||
+                    (s.QRToken != null && s.QRToken.Contains(searchString, StringComparison.OrdinalIgnoreCase)) ||
+                    (s.PhoneNumber != null && s.PhoneNumber.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+                );
+            }
+            if (gradeId.HasValue)
+            {
+                filteredStudents = filteredStudents.Where(s => s.GradeId == gradeId.Value);
+            }
 
             var codeType = await _settingService.GetSettingAsync("CodeType", "QR");
             ViewBag.CodeType = codeType;
 
-            return View(students);
+            return View(filteredStudents.ToList());
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> PrintSelectedQRCodes(List<int> studentIds)
+        {
+            if (studentIds == null || !studentIds.Any())
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+            var allStudents = await _studentService.GetAllStudentsAsync();
+            var selectedStudents = allStudents.Where(s => studentIds.Contains(s.StudentId)).ToList();
+
+            var codeType = await _settingService.GetSettingAsync("CodeType", "QR");
+            ViewBag.CodeType = codeType;
+
+            return View("ExportQRCodes", selectedStudents);
         }
 
         // ─── Export QR Codes page ──────────────────────────────────────────────
 
         [HttpGet]
-        public async Task<IActionResult> ExportQRCodes()
+        public async Task<IActionResult> ExportQRCodes(string searchString, int? gradeId)
         {
             var students = await _studentService.GetAllStudentsAsync();
+
+            var filteredStudents = students.AsEnumerable();
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                filteredStudents = filteredStudents.Where(s =>
+                    s.FullName.ContainsArabicFuzzy(searchString) ||
+                    (s.QRToken != null && s.QRToken.Contains(searchString, StringComparison.OrdinalIgnoreCase)) ||
+                    (s.PhoneNumber != null && s.PhoneNumber.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+                );
+            }
+            if (gradeId.HasValue)
+            {
+                filteredStudents = filteredStudents.Where(s => s.GradeId == gradeId.Value);
+            }
 
             var codeType = await _settingService.GetSettingAsync("CodeType", "QR");
             ViewBag.CodeType = codeType;
 
-            return View(students);
+            return View(filteredStudents.ToList());
         }
 
         [HttpGet]

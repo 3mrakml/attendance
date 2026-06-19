@@ -133,7 +133,7 @@ namespace Attendence_System.Controllers
                     // Search
                     if (!string.IsNullOrWhiteSpace(search))
                         studentExams = studentExams.Where(se =>
-                            se.Student!.FullName.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
+                            se.Student!.FullName.ContainsArabicFuzzy(search)).ToList();
 
                     // Sort
                     studentExams = (sortCol, sortAsc) switch
