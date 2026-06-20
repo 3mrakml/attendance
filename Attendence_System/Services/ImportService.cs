@@ -27,12 +27,13 @@ namespace Attendence_System.Services
         {
             var result = new ImportStudentResult();
 
-            // جلب الصفوف والهواتف الموجودة مسبقاً لهذا الـ Tenant
+            // جلب الصفوف الموجودة مسبقاً لهذا الـ Tenant
             var grades = await _context.Grades.ToListAsync();
-            var existingPhones = (await _context.Students
-                .Where(s => s.PhoneNumber != null && s.PhoneNumber != "")
-                .Select(s => s.PhoneNumber!)
-                .ToListAsync()).ToHashSet();
+
+            // جلب بيانات الطلاب الأساسية لتفادي التكرار التام
+            var existingStudents = await _context.Students
+                .Select(s => new { s.FullName, s.PhoneNumber, s.GradeId, s.Age, s.DateOfBirth })
+                .ToListAsync();
 
             var studentsToAdd = new List<Student>();
             
@@ -100,14 +101,6 @@ namespace Attendence_System.Services
                 // رقم الهاتف
                 string? phone = phoneCol > 0 ? GetCellString(ws.Cell(row, phoneCol)) : null;
                 if (string.IsNullOrWhiteSpace(phone)) phone = null;
-
-                // التحقق: هاتف مكرر
-                if (phone != null && existingPhones.Contains(phone))
-                {
-                    result.Errors.Add(new ImportStudentError { Label = name, Reason = "رقم الهاتف مكرر" });
-                    continue;
-                }
-
                 // السن
                 int age = 0;
                 DateOnly? dob = null;
@@ -161,7 +154,11 @@ namespace Attendence_System.Services
                             result.Errors.Add(new ImportStudentError
                             {
                                 Label = name,
-                                Reason = $"الصف '{gradeName}' غير موجود في النظام"
+                                Reason = $"الصف '{gradeName}' غير موجود في النظام",
+                                FullName = name,
+                                Phone = phone,
+                                Age = age > 0 ? age : null,
+                                DateOfBirth = dob.HasValue ? dob.Value.ToString("yyyy-MM-dd") : null
                             });
                             continue;
                         }
@@ -172,7 +169,11 @@ namespace Attendence_System.Services
                         result.Errors.Add(new ImportStudentError
                         {
                             Label = name,
-                            Reason = "خلية الصف فارغة. يرجى تحديد الصف."
+                            Reason = "خلية الصف فارغة. يرجى تحديد الصف.",
+                            FullName = name,
+                            Phone = phone,
+                            Age = age > 0 ? age : null,
+                            DateOfBirth = dob.HasValue ? dob.Value.ToString("yyyy-MM-dd") : null
                         });
                         continue;
                     }
@@ -199,6 +200,37 @@ namespace Attendence_System.Services
                     continue;
                 }
 
+                // التحقق من التكرار التام (نفس الاسم، الهاتف، الصف، العمر وتاريخ الميلاد)
+                var isDuplicateDB = existingStudents.Any(s =>
+                    (s.FullName ?? "").Trim().Equals(name.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                    s.PhoneNumber == phone &&
+                    s.GradeId == gradeId &&
+                    s.Age == age &&
+                    s.DateOfBirth == dob);
+
+                var isDuplicateInFile = studentsToAdd.Any(s =>
+                    (s.FullName ?? "").Trim().Equals(name.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                    s.PhoneNumber == phone &&
+                    s.GradeId == gradeId &&
+                    s.Age == age &&
+                    s.DateOfBirth == dob);
+
+                if (isDuplicateDB || isDuplicateInFile)
+                {
+                    result.Errors.Add(new ImportStudentError
+                    {
+                        Label = name,
+                        Reason = "طالب مكرر (تطابق تام في الاسم، الهاتف، الصف، والعمر)",
+                        FullName = name,
+                        Phone = phone,
+                        Age = age > 0 ? age : null,
+                        GradeId = gradeId,
+                        GradeName = grades.FirstOrDefault(g => g.GradeId == gradeId)?.Name,
+                        DateOfBirth = dob.HasValue ? dob.Value.ToString("yyyy-MM-dd") : null
+                    });
+                    continue;
+                }
+
                 // توليد QRToken فريد ومتسلسل حسب الصف
                 string token = await GenerateSequentialQRTokenAsync(gradeId, gradeSequenceTracker, studentsToAdd);
 
@@ -213,8 +245,7 @@ namespace Attendence_System.Services
                     TenantId = tenantId
                 });
 
-                // أضف الهاتف للمجموعة لتفادي التكرار داخل نفس الملف
-                if (phone != null) existingPhones.Add(phone);
+                // تمت إزالة التحقق من الهاتف المكرر
             }
 
             // حفظ الكل في batch واحدة

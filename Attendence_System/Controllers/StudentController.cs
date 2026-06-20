@@ -38,9 +38,11 @@ namespace Attendence_System.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(string searchString, int? gradeId, int page = 1)
+        public async Task<IActionResult> Index(string searchString, int? gradeId, int page = 1, int? sortCol = null, bool sortAsc = true)
         {
             var tenantId = User.FindFirstValue("TenantId");
+            if (string.IsNullOrEmpty(tenantId)) return Unauthorized();
+
             string studentsCacheKey = $"students_index_{tenantId}";
             string attCacheKey = $"attendance_perc_{tenantId}";
 
@@ -70,6 +72,22 @@ namespace Attendence_System.Controllers
                 filteredStudents = filteredStudents.Where(s => s.GradeId == gradeId.Value);
             }
 
+            if (sortCol.HasValue)
+            {
+                Func<Student, object> keySelector = sortCol.Value switch
+                {
+                    0 => s => s.FullName,
+                    1 => s => s.Grade?.Name ?? "",
+                    2 => s => attendancePercentages.ContainsKey(s.StudentId) ? attendancePercentages[s.StudentId] : 0,
+                    3 => s => s.QRToken ?? "",
+                    _ => s => s.FullName
+                };
+
+                filteredStudents = sortAsc 
+                    ? filteredStudents.OrderBy(keySelector) 
+                    : filteredStudents.OrderByDescending(keySelector);
+            }
+
             int pageSize = 50;
             var totalItems = filteredStudents.Count();
             var pagedStudents = filteredStudents.Skip((page - 1) * pageSize).Take(pageSize).ToList();
@@ -85,6 +103,8 @@ namespace Attendence_System.Controllers
             ViewBag.SearchString = searchString;
             ViewBag.GradeId = gradeId;
             ViewBag.TotalItems = totalItems;
+            ViewBag.SortCol = sortCol;
+            ViewBag.SortAsc = sortAsc;
 
             return View(pagedStudents);
         }

@@ -159,8 +159,8 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
-    <script src="~/js/delete.js" asp-append-version="true"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/Shared/Delete.js" asp-append-version="true"></script>
+    <script src="~/js/Shared/site.js" asp-append-version="true"></script>
     <script>
         function toggleReportsMenu(btn) {
             const submenu = document.getElementById('reports-submenu');
@@ -265,8 +265,8 @@
     <script>
         lucide.createIcons();
     </script>
-    <script src="~/js/global-prevent-submit.js" asp-append-version="true"></script>
-    <script src="~/js/auto-filter.js" asp-append-version="true"></script>
+    <script src="~/js/Shared/global-prevent-submit.js" asp-append-version="true"></script>
+    <script src="~/js/Shared/auto-filter.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
