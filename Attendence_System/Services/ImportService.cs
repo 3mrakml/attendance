@@ -118,7 +118,7 @@ namespace Attendence_System.Services
                             // احسب السن باستخدام التاريخ المرجعي العام من الإعدادات
                             var refDateStr = await _settingService.GetSettingAsync("AgeReferenceDate", "");
                             DateOnly refDate = string.IsNullOrEmpty(refDateStr) || !DateOnly.TryParse(refDateStr, out DateOnly parsedRef)
-                                ? DateOnly.FromDateTime(DateTime.Today)
+                                ? DateOnly.FromDateTime(Attendence_System.Helpers.AppTime.Today)
                                 : parsedRef;
                             int years = refDate.Year - dob.Value.Year;
                             if (refDate < dob.Value.AddYears(years)) years--;

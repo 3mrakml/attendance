@@ -185,7 +185,7 @@ namespace Attendence_System.Controllers
             {
                 Title = model.Title,
                 CourseId = model.CourseId,
-                DateTime = System.DateTime.Now
+                DateTime = Attendence_System.Helpers.AppTime.Now
             };
 
             lecture = await _lectureService.CreateLectureAsync(lecture, model.GradeIds!);
@@ -241,7 +241,7 @@ namespace Attendence_System.Controllers
             {
                 Student = s,
                 IsAttended = attendedStudentIds.Contains(s.StudentId),
-                AttendedAt = attendedStudentIds.Contains(s.StudentId) ? System.DateTime.Now : null
+                AttendedAt = attendedStudentIds.Contains(s.StudentId) ? Attendence_System.Helpers.AppTime.Now : null
             })
             .OrderByDescending(s => s.IsAttended)
             .ThenBy(s => s.Student.FullName)
@@ -282,7 +282,7 @@ namespace Attendence_System.Controllers
             {
                 Student = s,
                 IsAttended = attendedStudentIds.Contains(s.StudentId),
-                AttendedAt = attendedStudentIds.Contains(s.StudentId) ? System.DateTime.Now : null
+                AttendedAt = attendedStudentIds.Contains(s.StudentId) ? Attendence_System.Helpers.AppTime.Now : null
             })
             .OrderByDescending(s => s.IsAttended)
             .ThenBy(s => s.Student.FullName)

@@ -190,8 +190,8 @@ namespace Attendence_System.Controllers
             var fileBytes = _excelService.ExportToExcel(studentsReport, "ComprehensiveReport", columns);
 
             string fileName = gradeId.HasValue
-                ? $"Report_Grade_{gradeId.Value}_{DateTime.Now:yyyyMMdd}.xlsx"
-                : $"ComprehensiveReport_{DateTime.Now:yyyyMMdd}.xlsx";
+                ? $"Report_Grade_{gradeId.Value}_{Attendence_System.Helpers.AppTime.Now:yyyyMMdd}.xlsx"
+                : $"ComprehensiveReport_{Attendence_System.Helpers.AppTime.Now:yyyyMMdd}.xlsx";
 
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
@@ -241,8 +241,8 @@ namespace Attendence_System.Controllers
 
             var fileBytes = _excelService.ExportToExcel(studentsReport, "Attendance", columns);
             string fileName = gradeId.HasValue
-                ? $"Attendance_Grade_{gradeId.Value}_{DateTime.Now:yyyyMMdd}.xlsx"
-                : $"AttendanceReport_{DateTime.Now:yyyyMMdd}.xlsx";
+                ? $"Attendance_Grade_{gradeId.Value}_{Attendence_System.Helpers.AppTime.Now:yyyyMMdd}.xlsx"
+                : $"AttendanceReport_{Attendence_System.Helpers.AppTime.Now:yyyyMMdd}.xlsx";
 
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }

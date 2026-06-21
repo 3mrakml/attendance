@@ -1,0 +1,3 @@
+P:System.DateTime.Now; برجاء استخدام Attendence_System.Helpers.AppTime.Now بدلاً منه لضمان توقيت مصر المحلي.
+P:System.DateTime.Today; برجاء استخدام Attendence_System.Helpers.AppTime.Today بدلاً منه لضمان توقيت مصر المحلي.
+P:System.DateTime.UtcNow; برجاء استخدام Attendence_System.Helpers.AppTime.Now أو التوقيت المناسب بدلاً منه.

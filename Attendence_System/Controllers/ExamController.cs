@@ -190,7 +190,7 @@ namespace Attendence_System.Controllers
             };
 
             var fileBytes = _excelService.ExportToExcel(studentExams, "ExamResults", columns);
-            string fileName = $"امتحان_{exam.Title}_{exam.Grade?.Name}_{DateTime.Now:yyyyMMdd}.xlsx";
+            string fileName = $"امتحان_{exam.Title}_{exam.Grade?.Name}_{Attendence_System.Helpers.AppTime.Now:yyyyMMdd}.xlsx";
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
     }

@@ -79,6 +79,9 @@ builder.Services.AddScoped<IExamService, ExamService>();
 
 var app = builder.Build();
 
+// تهيئة أداة الوقت لتعمل مع الـ Context لجلب كوكيز المنطقة الزمنية
+Attendence_System.Helpers.AppTime.Configure(app.Services.GetRequiredService<IHttpContextAccessor>());
+
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();

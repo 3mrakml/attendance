@@ -9,6 +9,6 @@ namespace Attendence_System.Models
         public int LectureId { get; set; }
         public Lecture Lecture { get; set; }
 
-        public DateTime AttendedAt { get; set; } = DateTime.UtcNow; // وقت تسجيل الحضور
+        public DateTime AttendedAt { get; set; } = Attendence_System.Helpers.AppTime.Now; // وقت تسجيل الحضور
     }
 }

@@ -158,7 +158,7 @@ namespace Attendence_System.Services
             {
                 StudentId = studentInfo.StudentId,
                 LectureId = request.LectureId,
-                AttendedAt = DateTime.UtcNow
+                AttendedAt = Attendence_System.Helpers.AppTime.Now
             });
 
             await _context.SaveChangesAsync();

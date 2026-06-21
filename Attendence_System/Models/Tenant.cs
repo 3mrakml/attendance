@@ -10,7 +10,7 @@ namespace Attendence_System.Models
         [Required, MaxLength(100)]
         public string Name { get; set; } = string.Empty;
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = Attendence_System.Helpers.AppTime.Now;
 
         public bool IsActive { get; set; } = true;
 
