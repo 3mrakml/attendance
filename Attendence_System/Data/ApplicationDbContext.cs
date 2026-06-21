@@ -85,9 +85,9 @@ namespace Attendence_System.Data
                 .HasForeignKey(s => s.GradeId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Unique Index on QRToken
+            // Unique Index on QRToken per Tenant
             modelBuilder.Entity<Student>()
-                .HasIndex(s => s.QRToken)
+                .HasIndex(s => new { s.QRToken, s.TenantId })
                 .IsUnique();
 
             // ─── CourseGrade (Many-to-Many) ───────────────────────────────────

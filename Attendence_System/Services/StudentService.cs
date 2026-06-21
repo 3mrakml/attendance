@@ -78,7 +78,7 @@ namespace Attendence_System.Services
             while (true)
             {
                 nextSeq++;
-                newToken = $"{gradeId}{nextSeq:D3}";
+                newToken = $"{prefix}{nextSeq:D3}";
                 if (!await _context.Students.AnyAsync(s => s.QRToken == newToken))
                 {
                     break;

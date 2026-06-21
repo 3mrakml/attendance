@@ -299,21 +299,9 @@ namespace Attendence_System.Services
                 gradeSequenceTracker[gradeId] = maxSeq;
             }
 
-            string newToken;
-            while (true)
-            {
-                gradeSequenceTracker[gradeId]++;
-                int nextSeq = gradeSequenceTracker[gradeId];
-                newToken = $"{gradeId}{nextSeq:D3}";
-                
-                // التأكد من عدم التكرار (لتفادي أي مشاكل لو كان في رقم مسجل يدوياً بنفس الصيغة)
-                if (!studentsToAdd.Any(s => s.QRToken == newToken) && !await _context.Students.AnyAsync(s => s.QRToken == newToken))
-                {
-                    break;
-                }
-            }
-
-            return newToken;
+            gradeSequenceTracker[gradeId]++;
+            int nextSeq = gradeSequenceTracker[gradeId];
+            return $"{prefix}{nextSeq:D3}";
         }
 
         /// <summary>توحيد النصوص العربية لتجاهل الفروقات في الهمزات والتاء المربوطة</summary>

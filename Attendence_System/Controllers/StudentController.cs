@@ -106,6 +106,12 @@ namespace Attendence_System.Controllers
             ViewBag.SortCol = sortCol;
             ViewBag.SortAsc = sortAsc;
 
+            if (TempData["ImportErrorsKey"] is string cacheKey && _cache.TryGetValue(cacheKey, out string? errorsJson))
+            {
+                ViewBag.ImportErrorsJson = errorsJson;
+                _cache.Remove(cacheKey);
+            }
+
             return View(pagedStudents);
         }
 
@@ -363,7 +369,12 @@ namespace Attendence_System.Controllers
                 var result = await _importService.ImportStudentsFromExcelAsync(excelFile, tenantId);
                 TempData["ImportAdded"] = result.AddedCount;
                 if (result.HasErrors)
-                    TempData["ImportErrors"] = JsonSerializer.Serialize(result.Errors);
+                {
+                    string cacheKey = $"ImportErrors_{Guid.NewGuid()}";
+                    var cache = HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+                    cache.Set(cacheKey, JsonSerializer.Serialize(result.Errors), TimeSpan.FromMinutes(10));
+                    TempData["ImportErrorsKey"] = cacheKey;
+                }
             }
             catch (Exception ex)
             {

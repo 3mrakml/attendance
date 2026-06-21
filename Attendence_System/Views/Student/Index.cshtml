@@ -46,7 +46,7 @@
     @if (TempData["ImportAdded"] != null)
     {
         var added = (int)TempData["ImportAdded"]!;
-        var errorsJson = TempData["ImportErrors"] as string ?? "[]";
+        var errorsJson = ViewBag.ImportErrorsJson as string ?? TempData["ImportErrors"] as string ?? "[]";
         <!-- حفظ بيانات الاستيراد في localStorage عند أول تحميل (من السيرفر) -->
         <script>
             (function() {
