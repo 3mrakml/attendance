@@ -234,14 +234,14 @@ namespace Attendence_System.Controllers
             var allStudents = await _studentService.GetAllStudentsAsync();
             var allStudentsInGrades = allStudents.Where(s => lectureGradeIds.Contains(s.GradeId)).ToList();
 
-            var attendedStudentsData = await _lectureService.GetStudentsInLectureAsync(id);
-            var attendedStudentIds = attendedStudentsData.Select(s => s.StudentId).ToHashSet();
+            var attendedStudentsData = await _lectureService.GetStudentLecturesAsync(id);
+            var attendedStudentsDict = attendedStudentsData.ToDictionary(s => s.StudentId, s => s.AttendedAt);
 
             var studentsStatus = allStudentsInGrades.Select(s => new StudentAttendanceStatus
             {
                 Student = s,
-                IsAttended = attendedStudentIds.Contains(s.StudentId),
-                AttendedAt = attendedStudentIds.Contains(s.StudentId) ? Attendence_System.Helpers.AppTime.Now : null
+                IsAttended = attendedStudentsDict.ContainsKey(s.StudentId),
+                AttendedAt = attendedStudentsDict.TryGetValue(s.StudentId, out var attendedAt) ? attendedAt : null
             })
             .OrderByDescending(s => s.IsAttended)
             .ThenBy(s => s.Student.FullName)
@@ -275,14 +275,14 @@ namespace Attendence_System.Controllers
             var allStudents = await _studentService.GetAllStudentsAsync();
             var allStudentsInGrades = allStudents.Where(s => lectureGradeIds.Contains(s.GradeId)).ToList();
 
-            var attendedStudentsData = await _lectureService.GetStudentsInLectureAsync(id);
-            var attendedStudentIds = attendedStudentsData.Select(s => s.StudentId).ToHashSet();
+            var attendedStudentsData = await _lectureService.GetStudentLecturesAsync(id);
+            var attendedStudentsDict = attendedStudentsData.ToDictionary(s => s.StudentId, s => s.AttendedAt);
 
             var studentsStatus = allStudentsInGrades.Select(s => new StudentAttendanceStatus
             {
                 Student = s,
-                IsAttended = attendedStudentIds.Contains(s.StudentId),
-                AttendedAt = attendedStudentIds.Contains(s.StudentId) ? Attendence_System.Helpers.AppTime.Now : null
+                IsAttended = attendedStudentsDict.ContainsKey(s.StudentId),
+                AttendedAt = attendedStudentsDict.TryGetValue(s.StudentId, out var attendedAt) ? attendedAt : null
             })
             .OrderByDescending(s => s.IsAttended)
             .ThenBy(s => s.Student.FullName)

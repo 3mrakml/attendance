@@ -100,6 +100,14 @@ namespace Attendence_System.Services
                 .ToListAsync();
         }
 
+        public async Task<List<StudentLecture>> GetStudentLecturesAsync(int lectureId)
+        {
+            return await _context.StudentLectures
+                .Where(sl => sl.LectureId == lectureId)
+                .Include(sl => sl.Student)
+                .ToListAsync();
+        }
+
         public async Task<Dictionary<int, int>> GetAttendedCountsForLecturesAsync(List<int> lectureIds)
         {
             if (lectureIds == null || !lectureIds.Any())
