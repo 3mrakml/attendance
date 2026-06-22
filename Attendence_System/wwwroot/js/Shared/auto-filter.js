@@ -47,6 +47,51 @@ document.addEventListener('DOMContentLoaded', function () {
         const doneTypingInterval = 800; // fallback debounce (ms)
 
         function saveFocusAndSubmit() {
+            // Check if we can use AJAX replacement
+            const targetContainerId = form.dataset.ajaxTarget;
+            if (targetContainerId) {
+                const targetContainer = document.querySelector(targetContainerId);
+                if (targetContainer) {
+                    targetContainer.style.opacity = '0.5';
+                    targetContainer.style.pointerEvents = 'none';
+
+                    const url = new URL(form.action || window.location.href);
+                    const formData = new FormData(form);
+                    for (const [key, value] of formData) {
+                        if (value) url.searchParams.set(key, value);
+                        else url.searchParams.delete(key);
+                    }
+                    
+                    fetch(url.toString(), {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(res => res.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newContainer = doc.querySelector(targetContainerId);
+                        
+                        if (newContainer) {
+                            targetContainer.innerHTML = newContainer.innerHTML;
+                            targetContainer.style.opacity = '1';
+                            targetContainer.style.pointerEvents = 'auto';
+                            window.history.replaceState({}, '', url.toString());
+                            
+                            // Re-initialize Lucide icons
+                            if (typeof lucide !== 'undefined') lucide.createIcons();
+                            
+                            // Trigger event for any other scripts
+                            document.dispatchEvent(new Event('ajax-updated'));
+                        } else {
+                            form.submit();
+                        }
+                    })
+                    .catch(() => form.submit());
+                    return;
+                }
+            }
+            
+            // Fallback: normal submit
             const activeElement = document.activeElement;
             if (activeElement && activeElement.tagName === 'INPUT' && activeElement.id) {
                 sessionStorage.setItem('autoFilter_focusedInputId', activeElement.id);
@@ -78,15 +123,13 @@ document.addEventListener('DOMContentLoaded', function () {
         // ── Text Inputs ──────────────────────────────────
         const textInputs = form.querySelectorAll('input[type="text"], input[type="search"]');
         textInputs.forEach(input => {
-            // Apply on page load for preserved search values
             if (input.value) applyLiveFilter(input.value);
 
             input.addEventListener('input', function () {
                 if (liveRows) {
-                    // ✨ FULLY LIVE — instant client-side row filtering
                     applyLiveFilter(this.value);
-                } else {
-                    // Fallback: debounced server submit
+                } else if (form.dataset.ajaxTarget) {
+                    // Use AJAX with debounce to avoid full page reload
                     clearTimeout(typingTimer);
                     typingTimer = setTimeout(() => {
                         const pageInput = form.querySelector('input[name="page"], input[name="pageIndex"]');
@@ -98,14 +141,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
             input.addEventListener('keydown', function (e) {
                 if (!liveRows) clearTimeout(typingTimer);
-                // Enter key submits form to persist filter in URL
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     const pageInput = form.querySelector('input[name="page"], input[name="pageIndex"]');
                     if (pageInput) pageInput.value = '1';
                     saveFocusAndSubmit();
                 }
-                // Ignore arrow keys
                 if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.key)) return;
             });
         });

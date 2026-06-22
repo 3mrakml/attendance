@@ -63,7 +63,7 @@
     <div id="importAlertContainer"></div>
 
     <!-- Filters Section -->
-    <form id="filterForm" method="get" asp-action="Index" class="js-auto-filter bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4">
+    <form id="filterForm" method="get" asp-action="Index" data-ajax-target="#ajax-update-container" class="js-auto-filter bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4">
         <div class="flex-1 relative">
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
@@ -98,8 +98,9 @@
         <input type="hidden" name="page" value="1" id="pageInput" />
     </form>
 
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <form id="printSelectedForm" method="post" action="@Url.Action("PrintSelectedQRCodes", "Student")" target="_blank">
+    <div id="ajax-update-container">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <form id="printSelectedForm" method="post" action="@Url.Action("PrintSelectedQRCodes", "Student")" target="_blank">
             <div class="overflow-x-auto">
                 <table id="studentsTable" class="min-w-full divide-y divide-slate-100">
                     <thead class="bg-slate-50/50">
@@ -315,6 +316,7 @@
             </div>
         </div>
     }
+    </div>
 </div>
 
 <!-- Edit Student Modal -->
