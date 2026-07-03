@@ -210,6 +210,27 @@ namespace Attendence_System.Services
             return (true, $"{studentInfo.FullName} تم تسجيل حضوره بنجاح!");
         }
 
+        public async Task<bool> RemoveAttendanceAsync(int lectureId, int studentId)
+        {
+            var record = await _context.StudentLectures
+                .FirstOrDefaultAsync(sl => sl.LectureId == lectureId && sl.StudentId == studentId);
+
+            if (record != null)
+            {
+                _context.StudentLectures.Remove(record);
+
+                var lecture = await _context.Lectures.FindAsync(lectureId);
+                if (lecture != null && lecture.AttendedCount > 0)
+                {
+                    lecture.AttendedCount--;
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            return false;
+        }
+
         public async Task<List<StudentWithCount>> GetCourseAttendanceStatsAsync(int courseId)
         {
             var stats = await _context.StudentLectures

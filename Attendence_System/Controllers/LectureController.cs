@@ -254,6 +254,17 @@ namespace Attendence_System.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> RemoveAttendance(int lectureId, int studentId)
+        {
+            var success = await _studentService.RemoveAttendanceAsync(lectureId, studentId);
+            if (success)
+            {
+                return Json(new { success = true, message = "تم إلغاء حضور الطالب بنجاح." });
+            }
+            return Json(new { success = false, message = "لم يتم العثور على سجل الحضور أو حدث خطأ." });
+        }
+
+        [HttpPost]
         public async Task<IActionResult> SyncCounts()
         {
             await _lectureService.SyncCountsAsync();

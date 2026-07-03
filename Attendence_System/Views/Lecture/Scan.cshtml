@@ -309,14 +309,43 @@
         @if (!ViewBag.IsClosed) {
             <text>
             const html5QrCode = new Html5Qrcode("qr-reader");
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                (decodedText) => processScanResult(decodedText),
-                (errorMessage) => { /* ignore frame errors */ }
-            ).catch(err => {
-                console.error("Camera start failed", err);
-                document.getElementById("qr-reader").innerHTML = `<div class="p-4 text-rose-500 font-bold"><i class="bi bi-camera-video-off text-2xl block mb-2"></i>تعذر تشغيل الكاميرا. يرجى التأكد من السماح بالصلاحيات.</div>`;
+            
+            function startCamera() {
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => processScanResult(decodedText),
+                    (errorMessage) => { /* ignore frame errors */ }
+                ).catch(err => {
+                    console.error("Camera start failed", err);
+                    document.getElementById("qr-reader").innerHTML = `<div class="p-4 text-rose-500 font-bold"><i class="bi bi-camera-video-off text-2xl block mb-2"></i>تعذر تشغيل الكاميرا. يرجى التأكد من السماح بالصلاحيات.</div>`;
+                });
+            }
+
+            function stopCamera() {
+                try {
+                    if (html5QrCode.isScanning) {
+                        html5QrCode.stop().catch(err => console.error("Error stopping", err));
+                    }
+                } catch(e) {}
+            }
+
+            // تشغيل الكاميرا عند فتح الصفحة
+            startCamera();
+
+            // حل مشكلة تعليق الكاميرا عند قفل الشاشة أو خروج المتصفح للخلفية (iOS / Android)
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === 'hidden') {
+                    // إغلاق الكاميرا لتحرير موارد النظام وتوفير البطارية
+                    stopCamera();
+                } else if (document.visibilityState === 'visible') {
+                    // إعادة تشغيل الكاميرا بعد مهلة قصيرة جداً لضمان استجابة النظام
+                    setTimeout(() => {
+                        if (!html5QrCode.isScanning) {
+                            startCamera();
+                        }
+                    }, 300);
+                }
             });
             </text>
         }

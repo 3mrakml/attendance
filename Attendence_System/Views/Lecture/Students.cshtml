@@ -84,9 +84,12 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-center">
                                     @if (status.IsAttended)
                                     {
-                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
+                                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
                                             <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> حضر
-                                        </span>
+                                            <button type="button" class="text-rose-500 hover:text-rose-700 transition-colors mr-2 cursor-pointer" onclick="removeAttendance(@Model.lectureid, @status.Student.StudentId, '@status.Student.FullName')" title="إلغاء الحضور">
+                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
                                     }
                                     else
                                     {
@@ -129,3 +132,48 @@
     </div>
 </div>
 
+@section Scripts {
+    <script>
+        function removeAttendance(lectureId, studentId, studentName) {
+            Swal.fire({
+                title: 'هل أنت متأكد؟',
+                text: `هل تريد بالفعل إلغاء حضور الطالب (${studentName}) من هذه المحاضرة؟`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'نعم، إلغاء الحضور',
+                cancelButtonText: 'تراجع'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '@Url.Action("RemoveAttendance", "Lecture")',
+                        type: 'POST',
+                        data: {
+                            lectureId: lectureId,
+                            studentId: studentId
+                        },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'تم بنجاح',
+                                    text: res.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('خطأ!', res.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('خطأ!', 'حدث خطأ في الاتصال بالخادم.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}

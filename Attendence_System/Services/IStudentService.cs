@@ -17,6 +17,7 @@ namespace Attendence_System.Services
 
         // Attendance logic
         Task<(bool Success, string Message)> RegisterAttendanceAsync(ScanRequestVM request);
+        Task<bool> RemoveAttendanceAsync(int lectureId, int studentId);
         Task<List<StudentWithCount>> GetCourseAttendanceStatsAsync(int courseId);
         Task<Dictionary<int, double>> GetStudentsAttendancePercentagesAsync();
         Task<StudentReportViewModel?> GetStudentReportAsync(int studentId);
