@@ -7,6 +7,8 @@ namespace Attendence_System.Models
         public DateTime DateTime { get; set; }       // تاريخ ووقت المحاضرة
         public string? QRCode { get; set; }          // مسار صورة QR Code للمحاضرة
         public bool IsAttendanceClosed { get; set; } // هل أُغلق باب تسجيل الحضور
+        
+        public int AttendedCount { get; set; } // Cached count of attended students
 
         public int CourseId { get; set; }
         public Course Course { get; set; }

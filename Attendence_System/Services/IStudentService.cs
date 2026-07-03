@@ -22,5 +22,6 @@ namespace Attendence_System.Services
         Task<StudentReportViewModel?> GetStudentReportAsync(int studentId);
         Task<List<StudentReportItem>> GetComprehensiveReportAsync(int? gradeId);
         Task<Dictionary<int, int>> GetStudentCountByGradeAsync();
+        Task<Dictionary<int, int>> GetStudentCountByGradeIdsAsync(List<int> gradeIds);
     }
 }

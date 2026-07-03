@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Attendence_System.Models;
+using Attendence_System.ViewModel;
 
 namespace Attendence_System.Services
 {
@@ -13,8 +14,9 @@ namespace Attendence_System.Services
         Task<bool> DeleteLectureAsync(int lectureId);
         Task<Lecture?> UpdateLectureTitleAsync(int lectureId, string title);
         Task<List<Student>> GetStudentsInLectureAsync(int lectureId);
-        Task<List<StudentLecture>> GetStudentLecturesAsync(int lectureId);
-        Task<Dictionary<int, int>> GetAttendedCountsForLecturesAsync(List<int> lectureIds);
-        System.Linq.IQueryable<Lecture> GetAllLecturesQueryable();
+
+        Task<List<StudentAttendanceStatus>> GetStudentAttendanceStatusForLectureAsync(int lectureId);
+        Task<List<Lecture>> GetFilteredLecturesAsync(string search, int? gradeId);
+        Task SyncCountsAsync();
     }
 }

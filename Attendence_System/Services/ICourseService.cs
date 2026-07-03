@@ -11,5 +11,7 @@ namespace Attendence_System.Services
         Task<bool> DeleteCourseAsync(int id);
         Task<List<Course>> GetCoursesByGradeAsync(int gradeId);
         Task<bool> IsCourseAssignedToGradeAsync(int courseId, int gradeId);
+        Task<List<Course>> GetCommonCoursesByGradesAsync(List<int> gradeIds);
+        Task<bool> AreCoursesAssignedToGradesAsync(int courseId, List<int> gradeIds);
     }
 }

@@ -30,6 +30,17 @@ namespace Attendence_System.Services
                 .ToDictionaryAsync(g => g.GradeId, g => g.Count);
         }
 
+        public async Task<Dictionary<int, int>> GetStudentCountByGradeIdsAsync(List<int> gradeIds)
+        {
+            if (gradeIds == null || !gradeIds.Any()) return new Dictionary<int, int>();
+
+            return await _context.Students
+                .Where(s => gradeIds.Contains(s.GradeId))
+                .GroupBy(s => s.GradeId)
+                .Select(g => new { GradeId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.GradeId, g => g.Count);
+        }
+
         public async Task<Student?> GetStudentByIdAsync(int id)
         {
             return await _context.Students
@@ -90,6 +101,11 @@ namespace Attendence_System.Services
         public async Task<Student> CreateStudentAsync(Student student)
         {
             _context.Students.Add(student);
+            
+            // Increment Grade.StudentCount
+            var grade = await _context.Grades.FindAsync(student.GradeId);
+            if (grade != null) grade.StudentCount++;
+
             await _context.SaveChangesAsync();
             return student;
         }
@@ -98,6 +114,16 @@ namespace Attendence_System.Services
         {
             var existingStudent = await _context.Students.FindAsync(student.StudentId);
             if (existingStudent == null) return false;
+
+            // Handle Grade Change
+            if (existingStudent.GradeId != student.GradeId)
+            {
+                var oldGrade = await _context.Grades.FindAsync(existingStudent.GradeId);
+                if (oldGrade != null && oldGrade.StudentCount > 0) oldGrade.StudentCount--;
+
+                var newGrade = await _context.Grades.FindAsync(student.GradeId);
+                if (newGrade != null) newGrade.StudentCount++;
+            }
 
             existingStudent.FullName = student.FullName;
             existingStudent.Age = student.Age;
@@ -111,8 +137,22 @@ namespace Attendence_System.Services
 
         public async Task<bool> DeleteStudentAsync(int id)
         {
-            var student = await _context.Students.FirstOrDefaultAsync(s => s.StudentId == id);
+            var student = await _context.Students
+                .Include(s => s.StudentLectures)
+                .FirstOrDefaultAsync(s => s.StudentId == id);
             if (student == null) return false;
+
+            var grade = await _context.Grades.FindAsync(student.GradeId);
+            if (grade != null && grade.StudentCount > 0) grade.StudentCount--;
+
+            if (student.StudentLectures != null)
+            {
+                foreach (var sl in student.StudentLectures)
+                {
+                    var lecture = await _context.Lectures.FindAsync(sl.LectureId);
+                    if (lecture != null && lecture.AttendedCount > 0) lecture.AttendedCount--;
+                }
+            }
 
             _context.Students.Remove(student);
             await _context.SaveChangesAsync();
@@ -160,6 +200,10 @@ namespace Attendence_System.Services
                 LectureId = request.LectureId,
                 AttendedAt = Attendence_System.Helpers.AppTime.Now
             });
+
+            // Increment AttendedCount for Lecture
+            var lecture = await _context.Lectures.FindAsync(request.LectureId);
+            if (lecture != null) lecture.AttendedCount++;
 
             await _context.SaveChangesAsync();
 

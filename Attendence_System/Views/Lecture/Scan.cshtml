@@ -196,16 +196,35 @@
 
         let lastScannedId = "";
 
+        let scanQueue = [];
+
         function processScanResult(decodedText) {
-            if (isProcessing) return;
             const studentId = decodedText.trim();
+            
+            // 1. ALWAYS clear the input box immediately to prevent concatenating with the next scan
+            // and to clear it out if it's a double-scan.
+            if (usbScannerInput) {
+                usbScannerInput.value = '';
+                usbScannerInput.focus();
+            }
+
             if (!studentId) return;
 
-            // Prevent double-scanning the exact same card rapidly (within 2 seconds)
+            // 2. Prevent double-scanning the exact same card rapidly (within 2 seconds)
             if (lastScannedId === studentId) return;
+            
             lastScannedId = studentId;
-            setTimeout(() => { lastScannedId = ""; }, 2000);
+            setTimeout(() => { if (lastScannedId === studentId) lastScannedId = ""; }, 2000);
 
+            // 3. Add to queue and trigger processing
+            scanQueue.push(studentId);
+            processQueue();
+        }
+
+        function processQueue() {
+            if (isProcessing || scanQueue.length === 0) return;
+            
+            const studentId = scanQueue.shift();
             isProcessing = true;
             
             // 1. Instant Audio Feedback
@@ -213,7 +232,7 @@
             
             // 2. Optimistic UI Log
             if(emptyLogMsg) emptyLogMsg.style.display = 'none';
-            const optId = 'opt-' + Date.now();
+            const optId = 'opt-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
             const li = document.createElement('li');
             li.id = optId;
             li.className = "p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-sm flex items-start shadow-sm animate-pulse";
@@ -233,40 +252,40 @@
             })
             .then(res => res.json())
             .then(data => {
-                const optEl = document.getElementById(optId);
-                if (optEl) optEl.remove(); // Remove optimistic log
-
                 if (data.success) {
-                    scanCount++;
-                    scanCountEl.innerText = `${scanCount} تم مسحه`;
-                    addLog(data.message, true);
+                    // تأخير ثانية واحدة في حالة النجاح
+                    setTimeout(() => {
+                        const optEl = document.getElementById(optId);
+                        if (optEl) optEl.remove();
 
-                    Swal.fire({
-                        toast: true,
-                        position: 'top',
-                        icon: 'success',
-                        title: data.message,
-                        showConfirmButton: false,
-                        timer: 1000,
-                        timerProgressBar: false,
-                        showClass: { popup: '' }, // Disable show animation
-                        hideClass: { popup: '' }  // Disable hide animation
-                    });
+                        scanCount++;
+                        scanCountEl.innerText = `${scanCount} تم مسحه`;
+                        addLog(data.message, true);
+
+                        Swal.fire({
+                            toast: true, position: 'top', icon: 'success', title: data.message,
+                            showConfirmButton: false, timer: 1000, timerProgressBar: false,
+                            showClass: { popup: '' }, hideClass: { popup: '' }
+                        });
+                        
+                        isProcessing = false;
+                        processQueue();
+                    }, 1000);
                 } else {
-                    playBeep(false); // Play error buzz
+                    const optEl = document.getElementById(optId);
+                    if (optEl) optEl.remove();
+
+                    playBeep(false);
                     addLog(data.message, false);
 
                     Swal.fire({
-                        toast: true,
-                        position: 'top',
-                        icon: 'error',
-                        title: data.message,
-                        showConfirmButton: false,
-                        timer: 1500,
-                        timerProgressBar: false,
-                        showClass: { popup: '' },
-                        hideClass: { popup: '' }
+                        toast: true, position: 'top', icon: 'error', title: data.message,
+                        showConfirmButton: false, timer: 1500, timerProgressBar: false,
+                        showClass: { popup: '' }, hideClass: { popup: '' }
                     });
+                    
+                    isProcessing = false;
+                    processQueue();
                 }
             })
             .catch(() => {
@@ -274,26 +293,16 @@
                 if (optEl) optEl.remove();
 
                 playBeep(false);
-                const errMsg = 'حدث خطأ في الاتصال بالخادم.';
+                const errMsg = 'حدث خطأ في الاتصال بالخادم. الرجاء المحاولة مرة أخرى.';
                 addLog(errMsg, false);
                 Swal.fire({
-                    toast: true,
-                    position: 'top',
-                    icon: 'error',
-                    title: errMsg,
-                    showConfirmButton: false,
-                    timer: 1500,
-                    timerProgressBar: false,
-                    showClass: { popup: '' },
-                    hideClass: { popup: '' }
+                    toast: true, position: 'top', icon: 'error', title: errMsg,
+                    showConfirmButton: false, timer: 1500, timerProgressBar: false,
+                    showClass: { popup: '' }, hideClass: { popup: '' }
                 });
-            })
-            .finally(() => {
+                
                 isProcessing = false;
-                if (usbScannerInput) {
-                    usbScannerInput.value = '';
-                    usbScannerInput.focus();
-                }
+                processQueue();
             });
         }
 

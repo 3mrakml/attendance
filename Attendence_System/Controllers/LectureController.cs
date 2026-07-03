@@ -42,56 +42,15 @@ namespace Attendence_System.Controllers
         // ─── List Lectures (Index) ─────────────────────────────────────────────
 
         [HttpGet]
-        public async Task<IActionResult> Index(string search, int? gradeId, int page = 1)
+        public async Task<IActionResult> Index(string search, int? gradeId)
         {
             ViewBag.CurrentSearch  = search;
             ViewBag.CurrentGradeId = gradeId;
+            
             ViewBag.Grades = await _gradeService.GetAllGradesBasicAsync();
+            var lectures = await _lectureService.GetFilteredLecturesAsync(search, gradeId);
 
-            int pageSize = 20;
-
-            // ── Cache all lectures for 10 minutes to avoid reloading on every request ──
-            var tenantId = User.FindFirstValue("TenantId") ?? "";
-            string cacheKey = $"lectures_all_{tenantId}";
-
-            if (!_cache.TryGetValue(cacheKey, out List<Lecture>? allLectures) || allLectures == null)
-            {
-                allLectures = await _lectureService.GetAllLecturesQueryable().ToListAsync();
-                _cache.Set(cacheKey, allLectures, TimeSpan.FromMinutes(10));
-            }
-
-            IEnumerable<Lecture> filteredLectures = allLectures;
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                filteredLectures = filteredLectures.Where(l =>
-                    l.Title.ContainsArabicFuzzy(search) ||
-                    (l.Course != null && l.Course.Name.ContainsArabicFuzzy(search)));
-            }
-
-            if (gradeId.HasValue)
-            {
-                filteredLectures = filteredLectures.Where(l =>
-                    l.LectureGrades.Any(lg => lg.GradeId == gradeId.Value));
-            }
-
-            int totalCount  = filteredLectures.Count();
-            var pagedItems  = filteredLectures
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-
-            var paginatedLectures = new PaginatedList<Lecture>(pagedItems, totalCount, page, pageSize);
-
-            // Fetch student counts + attended counts sequentially to avoid EF Core concurrency issues on the same DbContext
-            var lectureIds = pagedItems.Select(l => l.LectureId).ToList();
-            var studentCountByGrade = await _studentService.GetStudentCountByGradeAsync();
-            var attendedCounts = await _lectureService.GetAttendedCountsForLecturesAsync(lectureIds);
-
-            ViewBag.StudentCountByGrade = studentCountByGrade;
-            ViewBag.AttendedCounts      = attendedCounts;
-
-            return View(paginatedLectures);
+            return View(lectures);
         }
 
         [HttpPost]
@@ -112,15 +71,8 @@ namespace Attendence_System.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            InvalidateLectureCache();
             TempData["SuccessMessage"] = "تم تعديل اسم المحاضرة بنجاح.";
             return RedirectToAction(nameof(Index));
-        }
-
-        private void InvalidateLectureCache()
-        {
-            var tenantId = User.FindFirstValue("TenantId") ?? "";
-            _cache.Remove($"lectures_all_{tenantId}");
         }
 
         // ─── Create Lecture ────────────────────────────────────────────────────
@@ -151,16 +103,10 @@ namespace Attendence_System.Controllers
 
             if (model.CourseId > 0 && model.GradeIds != null && model.GradeIds.Any())
             {
-                foreach (var gradeId in model.GradeIds)
+                var isAssigned = await _courseService.AreCoursesAssignedToGradesAsync(model.CourseId, model.GradeIds);
+                if (!isAssigned)
                 {
-                    var isAssigned = await _courseService.IsCourseAssignedToGradeAsync(model.CourseId, gradeId);
-                    if (!isAssigned)
-                    {
-                        var grades = await _gradeService.GetAllGradesAsync();
-                        var gradeName = grades.FirstOrDefault(g => g.GradeId == gradeId)?.Name ?? gradeId.ToString();
-                        ModelState.AddModelError("GradeIds", $"المادة غير مسجلة في الصف: {gradeName}.");
-                        break;
-                    }
+                    ModelState.AddModelError("GradeIds", "المادة غير مسجلة في جميع الصفوف المحددة.");
                 }
             }
 
@@ -181,24 +127,42 @@ namespace Attendence_System.Controllers
                 return View(model);
             }
 
-            var lecture = new Lecture
+            try
             {
-                Title = model.Title,
-                CourseId = model.CourseId,
-                DateTime = Attendence_System.Helpers.AppTime.Now
-            };
+                var lecture = new Lecture
+                {
+                    Title = model.Title,
+                    CourseId = model.CourseId,
+                    DateTime = Attendence_System.Helpers.AppTime.Now
+                };
 
-            lecture = await _lectureService.CreateLectureAsync(lecture, model.GradeIds!);
+                lecture = await _lectureService.CreateLectureAsync(lecture, model.GradeIds!);
 
-            InvalidateLectureCache();
-            return RedirectToAction("Scan", new { id = lecture.LectureId });
+                return RedirectToAction("Scan", new { id = lecture.LectureId });
+            }
+            catch (Exception)
+            {
+                ModelState.AddModelError("", "حدث خطأ أثناء إنشاء المحاضرة. قد يكون بسبب عدم حفظ البيانات بشكل صحيح.");
+                var courses = await _courseService.GetAllCoursesAsync();
+                var grades = await _gradeService.GetAllGradesAsync();
+                model.Courses = courses.Select(c => new SelectListItem
+                {
+                    Value = c.CourseId.ToString(),
+                    Text = c.Name
+                }).ToList();
+                model.Grades = grades.Select(g => new SelectListItem
+                {
+                    Value = g.GradeId.ToString(),
+                    Text = g.Name
+                }).ToList();
+                return View(model);
+            }
         }
 
         [HttpPost]
         public async Task<IActionResult> CloseAttendance(int id)
         {
             await _lectureService.CloseAttendanceAsync(id);
-            InvalidateLectureCache();
             return RedirectToAction(nameof(Students), new { id });
         }
 
@@ -208,14 +172,7 @@ namespace Attendence_System.Controllers
             if (gradeIds == null || !gradeIds.Any())
                 return Json(new List<object>());
 
-            var courses = await _courseService.GetCoursesByGradeAsync(gradeIds[0]);
-
-            for (int i = 1; i < gradeIds.Count; i++)
-            {
-                var nextGradeCourses = await _courseService.GetCoursesByGradeAsync(gradeIds[i]);
-                var nextGradeCourseIds = nextGradeCourses.Select(c => c.CourseId).ToHashSet();
-                courses = courses.Where(c => nextGradeCourseIds.Contains(c.CourseId)).ToList();
-            }
+            var courses = await _courseService.GetCommonCoursesByGradesAsync(gradeIds);
 
             var courseList = courses.Select(c => new { value = c.CourseId, text = c.Name }).ToList();
             return Json(courseList);
@@ -230,22 +187,7 @@ namespace Attendence_System.Controllers
             if (lecture == null)
                 return NotFound();
 
-            var lectureGradeIds = lecture.LectureGrades.Select(lg => lg.GradeId).ToHashSet();
-            var allStudents = await _studentService.GetAllStudentsAsync();
-            var allStudentsInGrades = allStudents.Where(s => lectureGradeIds.Contains(s.GradeId)).ToList();
-
-            var attendedStudentsData = await _lectureService.GetStudentLecturesAsync(id);
-            var attendedStudentsDict = attendedStudentsData.ToDictionary(s => s.StudentId, s => s.AttendedAt);
-
-            var studentsStatus = allStudentsInGrades.Select(s => new StudentAttendanceStatus
-            {
-                Student = s,
-                IsAttended = attendedStudentsDict.ContainsKey(s.StudentId),
-                AttendedAt = attendedStudentsDict.TryGetValue(s.StudentId, out var attendedAt) ? attendedAt : null
-            })
-            .OrderByDescending(s => s.IsAttended)
-            .ThenBy(s => s.Student.FullName)
-            .ToList();
+            var studentsStatus = await _lectureService.GetStudentAttendanceStatusForLectureAsync(id);
 
             var routeParams = new Dictionary<string, string> { { "id", id.ToString() } };
             var (paginatedStudents, paginationInfo) = studentsStatus.Paginate(page, 50, "Students", "Lecture", routeParams);
@@ -271,22 +213,7 @@ namespace Attendence_System.Controllers
             var lecture = await _lectureService.GetLectureByIdAsync(id);
             if (lecture == null) return NotFound();
 
-            var lectureGradeIds = lecture.LectureGrades.Select(lg => lg.GradeId).ToHashSet();
-            var allStudents = await _studentService.GetAllStudentsAsync();
-            var allStudentsInGrades = allStudents.Where(s => lectureGradeIds.Contains(s.GradeId)).ToList();
-
-            var attendedStudentsData = await _lectureService.GetStudentLecturesAsync(id);
-            var attendedStudentsDict = attendedStudentsData.ToDictionary(s => s.StudentId, s => s.AttendedAt);
-
-            var studentsStatus = allStudentsInGrades.Select(s => new StudentAttendanceStatus
-            {
-                Student = s,
-                IsAttended = attendedStudentsDict.ContainsKey(s.StudentId),
-                AttendedAt = attendedStudentsDict.TryGetValue(s.StudentId, out var attendedAt) ? attendedAt : null
-            })
-            .OrderByDescending(s => s.IsAttended)
-            .ThenBy(s => s.Student.FullName)
-            .ToList();
+            var studentsStatus = await _lectureService.GetStudentAttendanceStatusForLectureAsync(id);
 
             var columns = new Dictionary<string, Func<StudentAttendanceStatus, object>>
             {
@@ -324,6 +251,13 @@ namespace Attendence_System.Controllers
         {
             var result = await _studentService.RegisterAttendanceAsync(request);
             return Json(new { success = result.Success, message = result.Message });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SyncCounts()
+        {
+            await _lectureService.SyncCountsAsync();
+            return Ok("تمت المزامنة بنجاح");
         }
     }
 }

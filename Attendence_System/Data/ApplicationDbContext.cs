@@ -90,6 +90,9 @@ namespace Attendence_System.Data
                 .HasIndex(s => new { s.QRToken, s.TenantId })
                 .IsUnique();
 
+            modelBuilder.Entity<Student>()
+                .HasIndex(s => s.GradeId); // Performance Index for grouping by Grade
+
             // ─── CourseGrade (Many-to-Many) ───────────────────────────────────
             modelBuilder.Entity<CourseGrade>()
                 .HasKey(cg => new { cg.CourseId, cg.GradeId });
@@ -112,6 +115,9 @@ namespace Attendence_System.Data
                 .WithMany(c => c.Lectures)
                 .HasForeignKey(l => l.CourseId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Lecture>()
+                .HasIndex(l => l.DateTime); // Performance Index for OrderByDescending
 
             // ─── LectureGrade (Many-to-Many) ──────────────────────────────────
             modelBuilder.Entity<LectureGrade>()
@@ -147,6 +153,9 @@ namespace Attendence_System.Data
             modelBuilder.Entity<StudentLecture>()
                 .Property(sl => sl.AttendedAt)
                 .HasDefaultValueSql("GETUTCDATE()");
+
+            modelBuilder.Entity<StudentLecture>()
+                .HasIndex(sl => sl.LectureId); // Performance Index for grouping by LectureId
 
             // ─── Exam → Course ────────────────────────────────────────────────
             modelBuilder.Entity<Exam>()

@@ -1,5 +1,6 @@
 using Attendence_System.Data;
 using Attendence_System.Models;
+using Attendence_System.ViewModel;
 using Microsoft.EntityFrameworkCore;
 
 namespace Attendence_System.Services
@@ -36,21 +37,12 @@ namespace Attendence_System.Services
 
         public async Task<Lecture> CreateLectureAsync(Lecture lecture, List<int> gradeIds)
         {
-            _context.Lectures.Add(lecture);
-            await _context.SaveChangesAsync();
-
-            foreach (var gradeId in gradeIds)
+            if (gradeIds != null && gradeIds.Any())
             {
-                _context.LectureGrades.Add(new LectureGrade
-                {
-                    LectureId = lecture.LectureId,
-                    GradeId = gradeId
-                });
+                lecture.LectureGrades = gradeIds.Select(gId => new LectureGrade { GradeId = gId }).ToList();
             }
-            await _context.SaveChangesAsync();
 
-            lecture.QRCode = _qrCodeService.GenerateQRCode(lecture.LectureId.ToString());
-            _context.Lectures.Update(lecture);
+            _context.Lectures.Add(lecture);
             await _context.SaveChangesAsync();
 
             return lecture;
@@ -62,7 +54,6 @@ namespace Attendence_System.Services
             if (lecture != null)
             {
                 lecture.IsAttendanceClosed = true;
-                _context.Lectures.Update(lecture);
                 await _context.SaveChangesAsync();
                 return true;
             }
@@ -83,53 +74,112 @@ namespace Attendence_System.Services
 
         public async Task<bool> DeleteLectureAsync(int lectureId)
         {
-            var lecture = await _context.Lectures.FindAsync(lectureId);
-            if (lecture == null) return false;
+            var deleted = await _context.Lectures
+                .Where(l => l.LectureId == lectureId)
+                .ExecuteDeleteAsync();
 
-            _context.Lectures.Remove(lecture);
-            await _context.SaveChangesAsync();
-            return true;
+            return deleted > 0;
         }
 
         public async Task<List<Student>> GetStudentsInLectureAsync(int lectureId)
         {
             return await _context.StudentLectures
                 .Where(sl => sl.LectureId == lectureId)
-                .Include(sl => sl.Student)
                 .Select(sl => sl.Student)
                 .ToListAsync();
         }
 
-        public async Task<List<StudentLecture>> GetStudentLecturesAsync(int lectureId)
-        {
-            return await _context.StudentLectures
-                .Where(sl => sl.LectureId == lectureId)
-                .Include(sl => sl.Student)
-                .ToListAsync();
-        }
 
-        public async Task<Dictionary<int, int>> GetAttendedCountsForLecturesAsync(List<int> lectureIds)
-        {
-            if (lectureIds == null || !lectureIds.Any())
-                return new Dictionary<int, int>();
 
-            return await _context.StudentLectures
-                .Where(sl => lectureIds.Contains(sl.LectureId))
-                .GroupBy(sl => sl.LectureId)
-                .Select(g => new { LectureId = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(g => g.LectureId, g => g.Count);
-        }
-
-        public System.Linq.IQueryable<Lecture> GetAllLecturesQueryable()
+        public async Task<List<StudentAttendanceStatus>> GetStudentAttendanceStatusForLectureAsync(int lectureId)
         {
-            return _context.Lectures
-                .AsNoTracking()
-                .AsSplitQuery()
-                .Include(l => l.Course)
+            var lecture = await _context.Lectures
                 .Include(l => l.LectureGrades)
-                    .ThenInclude(lg => lg.Grade)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(l => l.LectureId == lectureId);
+
+            if (lecture == null) return new List<StudentAttendanceStatus>();
+
+            var gradeIds = lecture.LectureGrades.Select(lg => lg.GradeId).ToList();
+
+            var query = from student in _context.Students.Where(s => gradeIds.Contains(s.GradeId)).Include(s => s.Grade)
+                        join sl in _context.StudentLectures.Where(sl => sl.LectureId == lectureId)
+                        on student.StudentId equals sl.StudentId into slGroup
+                        from slRecord in slGroup.DefaultIfEmpty()
+                        select new StudentAttendanceStatus
+                        {
+                            Student = student,
+                            IsAttended = slRecord != null,
+                            AttendedAt = slRecord != null ? slRecord.AttendedAt : (DateTime?)null
+                        };
+
+            var list = await query.ToListAsync();
+
+            return list.OrderByDescending(s => s.IsAttended).ThenBy(s => s.Student.FullName).ToList();
+        }
+
+
+        public async Task<List<Lecture>> GetFilteredLecturesAsync(string search, int? gradeId)
+        {
+            var query = _context.Lectures.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(l =>
+                    l.Title.Contains(search) ||
+                    l.Course.Name.Contains(search));
+            }
+
+            if (gradeId.HasValue)
+            {
+                query = query.Where(l =>
+                    l.LectureGrades.Any(lg => lg.GradeId == gradeId.Value));
+            }
+
+            // Project only the exact columns needed to prevent massive data fetch (e.g. bypassing QRCode blobs)
+            var projected = await query
                 .OrderByDescending(l => l.DateTime)
-                .AsQueryable();
+                .Select(l => new 
+                {
+                    l.LectureId,
+                    l.Title,
+                    l.DateTime,
+                    l.AttendedCount,
+                    CourseName = l.Course.Name,
+                    Grades = l.LectureGrades.Select(lg => new { lg.Grade.Name, lg.Grade.StudentCount }).ToList()
+                })
+                .ToListAsync();
+
+            // Reconstruct minimal Lecture objects for the View
+            var list = projected.Select(p => new Lecture
+            {
+                LectureId = p.LectureId,
+                Title = p.Title,
+                DateTime = p.DateTime,
+                AttendedCount = p.AttendedCount,
+                Course = new Course { Name = p.CourseName },
+                LectureGrades = p.Grades.Select(g => new LectureGrade 
+                {
+                    Grade = new Grade { Name = g.Name, StudentCount = g.StudentCount }
+                }).ToList()
+            }).ToList();
+
+            return list;
+        }
+
+        public async Task SyncCountsAsync()
+        {
+            // تحديث كل الصفوف باستعلام واحد فقط في قاعدة البيانات
+            await _context.Grades
+                .ExecuteUpdateAsync(g => g.SetProperty(
+                    grade => grade.StudentCount, 
+                    grade => grade.Students.Count()));
+
+            // تحديث كل المحاضرات باستعلام واحد فقط في قاعدة البيانات
+            await _context.Lectures
+                .ExecuteUpdateAsync(l => l.SetProperty(
+                    lecture => lecture.AttendedCount, 
+                    lecture => lecture.StudentLectures.Count()));
         }
     }
 }

@@ -101,5 +101,35 @@ namespace Attendence_System.Services
             return await _context.CourseGrades
                 .AnyAsync(cg => cg.CourseId == courseId && cg.GradeId == gradeId);
         }
+
+        public async Task<List<Course>> GetCommonCoursesByGradesAsync(List<int> gradeIds)
+        {
+            if (gradeIds == null || !gradeIds.Any())
+                return new List<Course>();
+
+            int gradeCount = gradeIds.Count;
+
+            return await _context.Courses
+                .Where(c => _context.CourseGrades
+                    .Where(cg => gradeIds.Contains(cg.GradeId) && cg.CourseId == c.CourseId)
+                    .Select(cg => cg.GradeId)
+                    .Distinct()
+                    .Count() == gradeCount)
+                .ToListAsync();
+        }
+
+        public async Task<bool> AreCoursesAssignedToGradesAsync(int courseId, List<int> gradeIds)
+        {
+            if (gradeIds == null || !gradeIds.Any()) return true;
+
+            int gradeCount = gradeIds.Count;
+            int matchCount = await _context.CourseGrades
+                .Where(cg => cg.CourseId == courseId && gradeIds.Contains(cg.GradeId))
+                .Select(cg => cg.GradeId)
+                .Distinct()
+                .CountAsync();
+
+            return matchCount == gradeCount;
+        }
     }
 }

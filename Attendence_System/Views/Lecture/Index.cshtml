@@ -1,4 +1,4 @@
-@model Attendence_System.Extensions.PaginatedList<Attendence_System.Models.Lecture>
+@model IEnumerable<Attendence_System.Models.Lecture>
 
 @{
     ViewData["Title"] = "إدارة المحاضرات";
@@ -10,6 +10,7 @@
         <div>
             <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800">المحاضرات</h2>
             <p class="text-slate-500 mt-1 text-sm sm:text-base">استعرض جميع المحاضرات، قم بفلترتها، أو أدخل سجلات الحضور.</p>
+
         </div>
         <a href="@Url.Action("Create", "Lecture")" class="btn btn-primary whitespace-nowrap">
             <i data-lucide="plus" class="w-4 h-4"></i> إنشاء محاضرة جديدة
@@ -103,33 +104,10 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-medium" dir="ltr">
                                     @lecture.DateTime.ToString("yyyy-MM-dd hh:mm tt")
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <td class="px-6 py-4 whitespace-nowrap text-center" dir="ltr">
                                     @{
-                                        int totalStudents = 0;
-                                        if (lecture.LectureGrades != null && ViewBag.StudentCountByGrade != null)
-                                        {
-                                            var counts = ViewBag.StudentCountByGrade as Dictionary<int, int>;
-                                            if (counts != null)
-                                            {
-                                                foreach (var lg in lecture.LectureGrades)
-                                                {
-                                                    if (counts.ContainsKey(lg.GradeId))
-                                                    {
-                                                        totalStudents += counts[lg.GradeId];
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        int attendedCount = 0;
-                                        if (ViewBag.AttendedCounts != null)
-                                        {
-                                            var attCounts = ViewBag.AttendedCounts as Dictionary<int, int>;
-                                            if (attCounts != null && attCounts.ContainsKey(lecture.LectureId))
-                                            {
-                                                attendedCount = attCounts[lecture.LectureId];
-                                            }
-                                        }
-                                        int percentage = totalStudents > 0 ? (int)Math.Round((double)attendedCount / totalStudents * 100) : 0;
+                                        int totalStudents = lecture.LectureGrades?.Sum(lg => lg.Grade?.StudentCount ?? 0) ?? 0;
+                                        int percentage = totalStudents > 0 ? (int)Math.Round((double)lecture.AttendedCount / totalStudents * 100) : 0;
                                         string colorClass = percentage >= 80 ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
                                                             percentage >= 50 ? "bg-amber-100 text-amber-700 border-amber-200" :
                                                             "bg-rose-100 text-rose-700 border-rose-200";
@@ -173,52 +151,7 @@
             </table>
         </div>
 
-        <!-- Pagination -->
-        @if (Model.TotalPages > 1)
-        {
-            <div class="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-center">
-                <nav class="flex gap-1" dir="ltr">
-                    @if (Model.HasPreviousPage)
-                    {
-                        <a href="@Url.Action("Index", new { page = Model.PageIndex - 1, search = ViewBag.CurrentSearch, gradeId = ViewBag.CurrentGradeId })" class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-primary transition-colors">
-                            <i data-lucide="chevron-left" class="w-5 h-5"></i>
-                        </a>
-                    }
 
-                    @{
-                        int startPage = Math.Max(1, Model.PageIndex - 2);
-                        int endPage = Math.Min(Model.TotalPages, startPage + 4);
-                        if (endPage - startPage < 4)
-                        {
-                            startPage = Math.Max(1, endPage - 4);
-                        }
-                    }
-
-                    @for (int i = startPage; i <= endPage; i++)
-                    {
-                        if (i == Model.PageIndex)
-                        {
-                            <span class="w-10 h-10 flex items-center justify-center rounded-xl bg-primary text-white font-bold shadow-sm">
-                                @i
-                            </span>
-                        }
-                        else
-                        {
-                            <a href="@Url.Action("Index", new { page = i, search = ViewBag.CurrentSearch, gradeId = ViewBag.CurrentGradeId })" class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-primary font-medium transition-colors">
-                                @i
-                            </a>
-                        }
-                    }
-
-                    @if (Model.HasNextPage)
-                    {
-                        <a href="@Url.Action("Index", new { page = Model.PageIndex + 1, search = ViewBag.CurrentSearch, gradeId = ViewBag.CurrentGradeId })" class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-primary transition-colors">
-                            <i data-lucide="chevron-right" class="w-5 h-5"></i>
-                        </a>
-                    }
-                </nav>
-            </div>
-        }
     </div>
 </div>
 
@@ -273,5 +206,7 @@
                 editModal.classList.remove('hidden');
             });
         });
+
+        // AJAX removed as calculation is now purely instantaneous!
     });
 </script>

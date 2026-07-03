@@ -8,6 +8,8 @@ namespace Attendence_System.Models
         public int Code { get; set; }
         public int? MinAge { get; set; }
         public int? MaxAge { get; set; }
+        
+        public int StudentCount { get; set; } // Cached total students in this grade
 
         // Multi-tenancy
         public string TenantId { get; set; } = string.Empty;
