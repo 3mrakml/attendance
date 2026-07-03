@@ -16,7 +16,7 @@
             <h2 class="text-3xl font-extrabold text-slate-800">مادة @Model.CouresName</h2>
         </div>
         
-        <form method="get" asp-controller="Course" asp-action="Attendance" asp-route-id="@Hashids.Encode(Model.CourseId)">
+        <form method="get" asp-controller="Course" asp-action="Attendance" asp-route-id="@Hashids.Encode(Model.CourseId.Value)">
             <button type="submit" class="btn btn-success w-full md:w-auto">
                 <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
                 إحصائيات الحضور للمادة

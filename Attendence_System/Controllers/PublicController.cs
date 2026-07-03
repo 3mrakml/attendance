@@ -188,8 +188,8 @@ namespace Attendence_System.Controllers
             _cache.Remove($"attendance_perc_{tenantId}");
             _cache.Remove($"comprehensive_report_{tenantId}");
 
-            var encodedId = HttpContext.RequestServices.GetRequiredService<IHashidService>().Encode(model.StudentId);
-            return RedirectToAction("RegistrationSuccess", new { tenantId, id = encodedId });
+            var finalEncodedId = HttpContext.RequestServices.GetRequiredService<IHashidService>().Encode(model.StudentId);
+            return RedirectToAction("RegistrationSuccess", new { tenantId, id = finalEncodedId });
         }
 
         [HttpGet]
