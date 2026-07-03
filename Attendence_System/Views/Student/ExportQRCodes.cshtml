@@ -160,11 +160,13 @@
             <div class="code-side">
                 @if (ViewBag.CodeType == "Barcode")
                 {
-                    <img src="@Url.Action("DownloadCode", "Student", new { id = student.StudentId })" class="barcode-image" alt="Barcode" />
+                    <img src="@Url.Action("DownloadCode", "Student", new { id = Hashids.Encode(student.StudentId) })" class="barcode-image" alt="Barcode" />
                 }
                 else
                 {
-                    <img src="@Url.Action("DownloadCode", "Student", new { id = student.StudentId })" class="qr-image" alt="QR Code" />
+                    <div class="qr-container">
+                        <img src="@Url.Action("DownloadCode", "Student", new { id = Hashids.Encode(student.StudentId) })" class="qr-image" alt="QR Code" />
+                    </div>
                 }
             </div>
             <div class="info-wrapper">

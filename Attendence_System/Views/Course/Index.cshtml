@@ -57,7 +57,7 @@
                     
                     <p class="text-slate-500 text-sm mb-6 flex-grow">إدارة المحاضرات وسجلات الحضور الخاصة بهذه المادة.</p>
                     
-                    <form method="get" asp-controller="Course" asp-action="ViewLectures" asp-route-id="@course.CourseId" class="mt-auto w-full">
+                    <form method="get" asp-controller="Course" asp-action="ViewLectures" asp-route-id="@Hashids.Encode(course.CourseId)" class="mt-auto w-full">
                         <button type="submit" class="btn btn-neutral w-full group/btn">
                             عرض المحاضرات
                             <i data-lucide="arrow-left" class="w-4 h-4 group-hover/btn:-translate-x-1 transition-transform"></i>

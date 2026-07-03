@@ -141,7 +141,10 @@ namespace Attendence_System.Controllers
                     .FirstOrDefaultAsync(s => s.PhoneNumber == model.PhoneNumber && s.TenantId == tenantId);
 
                 if (existingStudent != null)
-                    return RedirectToAction("RegistrationSuccess", new { tenantId, id = existingStudent.StudentId });
+                {
+                    var encodedId = HttpContext.RequestServices.GetRequiredService<IHashidService>().Encode(existingStudent.StudentId);
+                    return RedirectToAction("RegistrationSuccess", new { tenantId, id = encodedId });
+                }
             }
 
             // Generate Sequential QRToken for this tenant based on GradeId
@@ -185,7 +188,8 @@ namespace Attendence_System.Controllers
             _cache.Remove($"attendance_perc_{tenantId}");
             _cache.Remove($"comprehensive_report_{tenantId}");
 
-            return RedirectToAction("RegistrationSuccess", new { tenantId, id = model.StudentId });
+            var encodedId = HttpContext.RequestServices.GetRequiredService<IHashidService>().Encode(model.StudentId);
+            return RedirectToAction("RegistrationSuccess", new { tenantId, id = encodedId });
         }
 
         [HttpGet]

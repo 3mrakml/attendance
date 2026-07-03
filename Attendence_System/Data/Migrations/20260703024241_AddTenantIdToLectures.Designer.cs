@@ -4,16 +4,19 @@ using Attendence_System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Attendence_System.Migrations
+namespace Attendence_System.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260703024241_AddTenantIdToLectures")]
+    partial class AddTenantIdToLectures
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -133,15 +136,9 @@ namespace Attendence_System.Migrations
                     b.Property<int>("GradeId")
                         .HasColumnType("int");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.HasKey("CourseId", "GradeId");
 
                     b.HasIndex("GradeId");
-
-                    b.HasIndex("TenantId");
 
                     b.ToTable("CourseGrades");
                 });
@@ -270,15 +267,9 @@ namespace Attendence_System.Migrations
                     b.Property<int>("GradeId")
                         .HasColumnType("int");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.HasKey("LectureId", "GradeId");
 
                     b.HasIndex("GradeId");
-
-                    b.HasIndex("TenantId");
 
                     b.ToTable("LectureGrades");
                 });
@@ -346,15 +337,9 @@ namespace Attendence_System.Migrations
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.HasKey("StudentExamId");
 
                     b.HasIndex("ExamId");
-
-                    b.HasIndex("TenantId");
 
                     b.HasIndex("StudentId", "ExamId")
                         .IsUnique();
@@ -602,17 +587,9 @@ namespace Attendence_System.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Attendence_System.Models.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Course");
 
                     b.Navigation("Grade");
-
-                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Attendence_System.Models.Exam", b =>
@@ -685,17 +662,9 @@ namespace Attendence_System.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Attendence_System.Models.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Grade");
 
                     b.Navigation("Lecture");
-
-                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Attendence_System.Models.Student", b =>
@@ -731,17 +700,9 @@ namespace Attendence_System.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Attendence_System.Models.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Exam");
 
                     b.Navigation("Student");
-
-                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Attendence_System.Models.StudentLecture", b =>
@@ -761,7 +722,7 @@ namespace Attendence_System.Migrations
                     b.HasOne("Attendence_System.Models.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Lecture");

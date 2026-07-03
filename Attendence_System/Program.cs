@@ -14,6 +14,12 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // DbContext — inject IHttpContextAccessor for Global Query Filters
 builder.Services.AddHttpContextAccessor();
 
+// Options Pattern
+builder.Services.AddOptions<Attendence_System.Options.AttendanceOptions>()
+    .BindConfiguration(Attendence_System.Options.AttendanceOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
 builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
 {
     var httpContextAccessor = sp.GetService<IHttpContextAccessor>();
@@ -62,10 +68,15 @@ builder.Services.AddAuthentication(options =>
 })
 .AddCookie(IdentityConstants.ExternalScheme);
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    // Insert our Hashid Model Binder Provider at the beginning so it runs before the default int binder
+    options.ModelBinderProviders.Insert(0, new Attendence_System.Infrastructure.HashidModelBinderProvider());
+});
 builder.Services.AddMemoryCache();
 
 // Application Services
+builder.Services.AddSingleton<IHashidService, HashidService>();
 builder.Services.AddScoped<IQRCodeService, QRCodeService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<ILectureService, LectureService>();

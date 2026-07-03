@@ -1,8 +1,11 @@
 namespace Attendence_System.Models
 {
-    public class Lecture
+    public class Lecture : IMustHaveTenant
     {
-        public int LectureId { get; set; }          // معرف المحاضرة (PK)
+        public int LectureId { get; set; }
+
+        public string TenantId { get; set; }
+        public Tenant Tenant { get; set; }
         public string Title { get; set; }            // عنوان المحاضرة
         public DateTime DateTime { get; set; }       // تاريخ ووقت المحاضرة
         public string? QRCode { get; set; }          // مسار صورة QR Code للمحاضرة

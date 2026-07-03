@@ -145,7 +145,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium">@(currentIndex++)</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <a asp-action="Report" asp-route-id="@item.StudentId" class="flex items-center hover:bg-slate-50 p-2 -ml-2 rounded-xl transition-colors group/link cursor-pointer">
+                                    <a asp-action="Report" asp-route-id="@Hashids.Encode(item.StudentId)" class="flex items-center hover:bg-slate-50 p-2 -ml-2 rounded-xl transition-colors group/link cursor-pointer">
                                         <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold group-hover/link:bg-primary group-hover/link:text-white transition-colors">
                                             @item.FullName?.FirstOrDefault()
                                         </div>
@@ -185,13 +185,13 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                     <div class="flex items-center justify-center gap-2">
-                                        <a href="@Url.Action("DownloadCode", "Student", new { id = item.StudentId })" class="action-btn action-btn-info" title="تحميل رمز QR">
+                                        <a href="@Url.Action("DownloadCode", "Student", new { id = Hashids.Encode(item.StudentId) })" class="action-btn action-btn-info" title="تحميل رمز QR">
                                             <i data-lucide="download" class="w-4 h-4"></i>
                                         </a>
-                                        <a href="@Url.Action("PrintSingleQR", "Student", new { id = item.StudentId })" target="_blank" class="action-btn action-btn-info" title="طباعة ملصق QR (حراري)">
+                                        <a href="@Url.Action("PrintSingleQR", "Student", new { id = Hashids.Encode(item.StudentId) })" target="_blank" class="action-btn action-btn-info" title="طباعة ملصق QR (حراري)">
                                             <i data-lucide="printer" class="w-4 h-4"></i>
                                         </a>
-                                        <a href="@Url.Action("PrintCard", "Student", new { id = item.StudentId })" target="_blank" class="action-btn action-btn-info" title="طباعة البطاقة (ID)">
+                                        <a href="@Url.Action("PrintCard", "Student", new { id = Hashids.Encode(item.StudentId) })" target="_blank" class="action-btn action-btn-info" title="طباعة البطاقة (ID)">
                                             <i data-lucide="id-card" class="w-4 h-4"></i>
                                         </a>
                                         <button type="button" class="action-btn action-btn-info js-edit-student"

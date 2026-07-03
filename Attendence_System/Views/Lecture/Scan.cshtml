@@ -99,11 +99,11 @@
         </div>
 
         <div class="mt-8 flex justify-center gap-4">
-            <a href="@Url.Action("Students", "Lecture", new { id = ViewBag.LectureId })" class="btn btn-primary">
-                <i class="bi bi-check-lg ml-2"></i>
-                إنهاء المسح
+            <a href="@Url.Action("Students", "Lecture", new { id = Hashids.Encode(ViewBag.LectureId) })" class="btn btn-primary">
+                <i data-lucide="users" class="w-4 h-4 mr-1"></i> قائمة الحاضرين
             </a>
-            <a href="@Url.Action("Students", "Lecture", new { id = ViewBag.LectureId })" class="btn btn-neutral">
+            
+            <a href="@Url.Action("Students", "Lecture", new { id = Hashids.Encode(ViewBag.LectureId) })" class="btn btn-neutral">
                 <i class="bi bi-people ml-2"></i>
                 عرض الطلاب
             </a>

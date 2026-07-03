@@ -195,6 +195,31 @@ namespace Attendence_System.Data
                 .HasIndex(se => new { se.StudentId, se.ExamId })
                 .IsUnique();
 
+            // ─── Multiple Cascade Path Fixes ──────────────────────────────────
+            modelBuilder.Entity<StudentLecture>()
+                .HasOne(sl => sl.Tenant)
+                .WithMany()
+                .HasForeignKey(sl => sl.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CourseGrade>()
+                .HasOne(cg => cg.Tenant)
+                .WithMany()
+                .HasForeignKey(cg => cg.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<LectureGrade>()
+                .HasOne(lg => lg.Tenant)
+                .WithMany()
+                .HasForeignKey(lg => lg.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<StudentExam>()
+                .HasOne(se => se.Tenant)
+                .WithMany()
+                .HasForeignKey(se => se.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // ─── Identity Tables ──────────────────────────────────────────────
             modelBuilder.Entity<AppUser>().ToTable("Users", "security");
             modelBuilder.Entity<IdentityRole>().ToTable("Roles", "security");
@@ -205,35 +230,44 @@ namespace Attendence_System.Data
             modelBuilder.Entity<IdentityUserToken<string>>().ToTable("UserTokens", "security");
 
             // ─── GLOBAL QUERY FILTERS (Automatic Tenant Isolation) ───────────
-            // These filters are applied automatically to ALL queries.
-            // No need to add .Where(x => x.TenantId == ...) anywhere in the code.
             if (_httpContextAccessor != null)
             {
-                modelBuilder.Entity<Grade>().HasQueryFilter(g =>
-                    _httpContextAccessor.HttpContext == null ||
-                    _httpContextAccessor.HttpContext.User == null ||
-                    g.TenantId == _currentTenantId);
-
-                modelBuilder.Entity<Course>().HasQueryFilter(c =>
-                    _httpContextAccessor.HttpContext == null ||
-                    _httpContextAccessor.HttpContext.User == null ||
-                    c.TenantId == _currentTenantId);
-
-                modelBuilder.Entity<Student>().HasQueryFilter(s =>
-                    _httpContextAccessor.HttpContext == null ||
-                    _httpContextAccessor.HttpContext.User == null ||
-                    s.TenantId == _currentTenantId);
-
-                modelBuilder.Entity<SystemSetting>().HasQueryFilter(ss =>
-                    _httpContextAccessor.HttpContext == null ||
-                    _httpContextAccessor.HttpContext.User == null ||
-                    ss.TenantId == _currentTenantId);
-
-                modelBuilder.Entity<Exam>().HasQueryFilter(e =>
-                    _httpContextAccessor.HttpContext == null ||
-                    _httpContextAccessor.HttpContext.User == null ||
-                    e.TenantId == _currentTenantId);
+                foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+                {
+                    if (typeof(IMustHaveTenant).IsAssignableFrom(entityType.ClrType))
+                    {
+                        var method = typeof(ApplicationDbContext).GetMethod(nameof(SetGlobalQueryFilter), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        var genericMethod = method?.MakeGenericMethod(entityType.ClrType);
+                        genericMethod?.Invoke(this, new object[] { modelBuilder });
+                    }
+                }
             }
+        }
+
+        private void SetGlobalQueryFilter<T>(ModelBuilder modelBuilder) where T : class, IMustHaveTenant
+        {
+            modelBuilder.Entity<T>().HasQueryFilter(e =>
+                _httpContextAccessor == null ||
+                _httpContextAccessor.HttpContext == null ||
+                _httpContextAccessor.HttpContext.User == null ||
+                e.TenantId == _currentTenantId);
+        }
+
+        // ─── AUTOMATED TENANT INJECTION ───────────────────────────────────
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            if (_currentTenantId != null)
+            {
+                foreach (var entry in ChangeTracker.Entries<IMustHaveTenant>().Where(e => e.State == EntityState.Added))
+                {
+                    // Only assign if it hasn't been explicitly assigned (or override it)
+                    if (string.IsNullOrEmpty(entry.Entity.TenantId))
+                    {
+                        entry.Entity.TenantId = _currentTenantId;
+                    }
+                }
+            }
+            return base.SaveChangesAsync(cancellationToken);
         }
     }
 }

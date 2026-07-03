@@ -27,7 +27,7 @@
             </div>
         </div>
         <div class="flex gap-2 w-full md:w-auto">
-            <a asp-action="PrintCard" asp-route-id="@Model.Student.StudentId" target="_blank" class="flex-1 md:flex-none btn btn-neutral">
+            <a asp-action="PrintCard" asp-route-id="@Hashids.Encode(Model.Student.StudentId)" target="_blank" class="flex-1 md:flex-none btn btn-neutral">
                 <i data-lucide="id-card" class="w-4 h-4 mr-1"></i> الكارنيه
             </a>
             <a asp-action="Index" class="flex-1 md:flex-none btn btn-neutral">

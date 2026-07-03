@@ -56,11 +56,9 @@ namespace Attendence_System.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(CourseViewModel model)
         {
-            var tenantId = User.FindFirstValue("TenantId");
             var newCourse = new Course
             {
-                Name = model.Name,
-                TenantId = tenantId!
+                Name = model.Name
             };
 
             await _courseService.CreateCourseAsync(newCourse, model.SelectedGradeIds);

@@ -16,7 +16,7 @@
             <h2 class="text-3xl font-extrabold text-slate-800">مادة @Model.CouresName</h2>
         </div>
         
-        <form method="get" asp-controller="Course" asp-action="Attendance" asp-route-id="@Model.CourseId">
+        <form method="get" asp-controller="Course" asp-action="Attendance" asp-route-id="@Hashids.Encode(Model.CourseId)">
             <button type="submit" class="btn btn-success w-full md:w-auto">
                 <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
                 إحصائيات الحضور للمادة
@@ -84,11 +84,10 @@
                     <p class="text-slate-500 text-sm mb-6 flex-grow">تفاصيل المحاضرة والطلاب الحاضرين.</p>
                     
                     <div class="grid grid-cols-2 gap-3 mt-auto">
-                        <a asp-controller="Lecture" asp-action="Scan" asp-route-id="@lecture.LectureId" class="btn btn-success">
-                            <i data-lucide="scan-qr-code" class="w-4 h-4"></i>
-                            مسح
+                        <a asp-controller="Lecture" asp-action="Scan" asp-route-id="@Hashids.Encode(lecture.LectureId)" class="btn btn-success">
+                            <i data-lucide="scan-line" class="w-4 h-4"></i> جهاز المسح
                         </a>
-                        <form method="get" asp-controller="Lecture" asp-action="Students" asp-route-id="@lecture.LectureId" class="w-full">
+                        <form method="get" asp-controller="Lecture" asp-action="Students" asp-route-id="@Hashids.Encode(lecture.LectureId)" class="w-full">
                             <button type="submit" class="btn btn-neutral w-full group/btn">
                                 الطلاب
                                 <i data-lucide="arrow-left" class="w-4 h-4 group-hover/btn:-translate-x-1 transition-transform"></i>

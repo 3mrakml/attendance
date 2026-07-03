@@ -56,10 +56,10 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-center font-black text-slate-800">@exam.MaxScore</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center">
                                     <div class="flex items-center justify-center gap-2">
-                                        <a href="@Url.Action("Scores", new { id = exam.ExamId })" class="btn btn-neutral text-xs py-1.5 px-3">
+                                        <a href="@Url.Action("Scores", new { id = Hashids.Encode(exam.ExamId) })" class="btn btn-neutral text-xs py-1.5 px-3">
                                             <i data-lucide="pencil" class="w-3.5 h-3.5"></i> إدخال الدرجات
                                         </a>
-                                        <form asp-action="Delete" asp-route-id="@exam.ExamId" method="post" class="js-delete-form">
+                                        <form asp-action="Delete" asp-route-id="@Hashids.Encode(exam.ExamId)" method="post" class="js-delete-form">
                                             @Html.AntiForgeryToken()
                                             <button type="submit" class="action-btn action-btn-danger" title="حذف الامتحان"
                                                     data-confirm-message="هل أنت متأكد من حذف امتحان &quot;@exam.Title&quot;؟">

@@ -118,7 +118,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center">
                                     <div class="flex items-center justify-center gap-2">
-                                        <a href="@Url.Action("Students", "Lecture", new { id = lecture.LectureId })" class="action-btn action-btn-success" title="تفاصيل الحضور">
+                                        <a href="@Url.Action("Students", "Lecture", new { id = Hashids.Encode(lecture.LectureId) })" class="action-btn action-btn-success" title="تفاصيل الحضور">
                                             <i data-lucide="eye" class="w-4 h-4"></i>
                                         </a>
                                         <button type="button" class="action-btn action-btn-primary js-edit-lecture" 

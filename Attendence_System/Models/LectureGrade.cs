@@ -4,8 +4,11 @@ namespace Attendence_System.Models
     /// جدول وسيط لعلاقة Many-to-Many بين المحاضرة والصف الدراسي
     /// يتيح ربط محاضرة واحدة بأكثر من مستوى/صف
     /// </summary>
-    public class LectureGrade
+    public class LectureGrade : IMustHaveTenant
     {
+        public string TenantId { get; set; }
+        public Tenant Tenant { get; set; }
+
         public int LectureId { get; set; }
         public Lecture Lecture { get; set; }
 

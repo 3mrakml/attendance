@@ -1,6 +1,6 @@
 namespace Attendence_System.Models
 {
-    public class Course
+    public class Course : IMustHaveTenant
     {
         public int CourseId { get; set; }
         public string Name { get; set; } = string.Empty;

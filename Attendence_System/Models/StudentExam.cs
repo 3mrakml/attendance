@@ -1,7 +1,10 @@
 namespace Attendence_System.Models
 {
-    public class StudentExam
+    public class StudentExam : IMustHaveTenant
     {
+        public string TenantId { get; set; }
+        public Tenant Tenant { get; set; }
+
         public int StudentExamId { get; set; }
 
         public int StudentId { get; set; }

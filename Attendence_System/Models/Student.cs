@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Attendence_System.Models
 {
-    public class Student
+    public class Student : IMustHaveTenant
     {
         public int StudentId { get; set; }
         public string FullName { get; set; } = string.Empty;
