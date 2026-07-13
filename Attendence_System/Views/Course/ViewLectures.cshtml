@@ -63,7 +63,7 @@
                         <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xl shadow-sm">
                             <i data-lucide="monitor-play" class="w-5 h-5"></i>
                         </div>
-                        <button type="button" class="action-btn action-btn-danger js-delete cursor-pointer" data-id="@lecture.LectureId" data-type="lecture" title="حذف المحاضرة">
+                        <button type="button" class="action-btn action-btn-danger js-delete cursor-pointer" data-id="@Hashids.Encode(lecture.LectureId)" data-type="lecture" title="حذف المحاضرة">
                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                     </div>

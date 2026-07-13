@@ -54,6 +54,21 @@
         </div>
     </div>
 
+    <!-- Search Bar -->
+    <form id="lectureStudentsFilterForm" class="js-auto-filter bg-white p-4 rounded-2xl shadow-sm border border-slate-100"
+          data-live-target="#studentsTable">
+        <div class="relative">
+            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <i data-lucide="search" class="w-4 h-4"></i>
+            </span>
+            <input type="text"
+                   id="lectureStudentSearch"
+                   name="search"
+                   class="w-full pr-11 pl-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-slate-900"
+                   placeholder="ابحث بالاسم أو كود QR..." />
+        </div>
+    </form>
+
     <!-- Students Table -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div class="overflow-x-auto">
@@ -61,6 +76,7 @@
                 <thead class="bg-slate-50/50">
                     <tr>
                         <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">الاسم</th>
+                        <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">رمز QR</th>
                         <th scope="col" class="px-6 py-4 text-center text-sm font-bold text-slate-500 uppercase tracking-wider">الحالة</th>
                         <th scope="col" class="px-6 py-4 text-right text-sm font-bold text-slate-500 uppercase tracking-wider">وقت الحضور</th>
                     </tr>
@@ -70,7 +86,8 @@
                     {
                         @foreach (var status in Model.Students)
                         {
-                            <tr class="hover:bg-slate-50/80 transition-colors group">
+                            <tr class="hover:bg-slate-50/80 transition-colors group"
+                                data-search="@($"{status.Student.FullName} {status.Student.QRToken}")">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
@@ -78,15 +95,19 @@
                                         </div>
                                         <div class="mr-4">
                                             <div class="text-sm font-bold text-slate-900">@status.Student.FullName</div>
+                                            <div class="text-xs text-slate-400 font-mono" dir="ltr">@status.Student.QRToken</div>
                                         </div>
                                     </div>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="font-mono font-bold text-slate-700 text-sm tracking-widest" dir="ltr">@status.Student.QRToken</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center">
                                     @if (status.IsAttended)
                                     {
                                         <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
                                             <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> حضر
-                                            <button type="button" class="text-rose-500 hover:text-rose-700 transition-colors mr-2 cursor-pointer" onclick="removeAttendance(@Model.lectureid, @status.Student.StudentId, '@status.Student.FullName')" title="إلغاء الحضور">
+                                            <button type="button" class="text-rose-500 hover:text-rose-700 transition-colors mr-2 cursor-pointer" onclick="removeAttendance('@Hashids.Encode(Model.lectureid)', '@Hashids.Encode(status.Student.StudentId)', '@status.Student.FullName')" title="إلغاء الحضور">
                                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                             </button>
                                         </div>
@@ -123,6 +144,13 @@
                             </td>
                         </tr>
                     }
+                    <!-- Empty search row -->
+                    <tr class="js-empty-row" style="display:none">
+                        <td colspan="4" class="px-6 py-12 text-center">
+                            <i data-lucide="search-x" class="w-10 h-10 text-slate-300 mx-auto mb-2"></i>
+                            <p class="font-semibold text-slate-500">لا توجد نتائج مطابقة لبحثك.</p>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -134,6 +162,7 @@
 
 @section Scripts {
     <script>
+        // ── Remove attendance ─────────────────────────────────────────────────
         function removeAttendance(lectureId, studentId, studentName) {
             Swal.fire({
                 title: 'هل أنت متأكد؟',

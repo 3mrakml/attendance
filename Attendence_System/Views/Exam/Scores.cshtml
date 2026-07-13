@@ -1,5 +1,5 @@
 @model List<Attendence_System.Models.StudentExam>
-
+@inject Attendence_System.Services.IHashidService Hashids
 @{
     var exam = ViewBag.Exam as Attendence_System.Models.Exam;
     ViewData["Title"] = $"درجات امتحان - {exam?.Title}";
@@ -46,7 +46,7 @@
     <!-- Scores Table -->
     <form asp-action="SaveScores" method="post">
         @Html.AntiForgeryToken()
-        <input type="hidden" name="examId" value="@exam?.ExamId" />
+        <input type="hidden" name="examId" value="@(exam != null ? Hashids.Encode(exam.ExamId) : "")" />
         <input type="hidden" name="page" value="@ViewBag.CurrentPage" />
         
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">

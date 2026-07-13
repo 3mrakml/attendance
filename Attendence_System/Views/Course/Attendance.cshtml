@@ -62,8 +62,8 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                    <button type="button" class="bg-white hover:bg-rose-50 text-slate-300 hover:text-rose-600 p-2 rounded-lg transition-colors border border-transparent hover:border-rose-100 js-delete" data-id="@student.StudentId" data-type="student" title="حذف الطالب">
-                                        <i class="bi bi-trash3 text-lg"></i>
+                                    <button type="button" class="bg-white hover:bg-rose-50 text-slate-300 hover:text-rose-600 p-2 rounded-lg transition-colors border border-transparent hover:border-rose-100 js-delete" data-id="@Hashids.Encode(student.StudentId)" data-type="student" title="حذف الطالب">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
                                     </button>
                                 </td>
                             </tr>

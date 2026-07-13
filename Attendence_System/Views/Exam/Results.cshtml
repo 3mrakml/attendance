@@ -23,7 +23,9 @@
     string SortUrl(string col) {
         bool newAsc = sortCol == col ? !sortAsc : false;
         return Url.Action("Results", new {
-            courseId = selCourse, gradeId = selGrade, examId = selExam,
+            courseId = selCourse != null ? Hashids.Encode((int)selCourse) : null,
+            gradeId = selGrade != null ? Hashids.Encode((int)selGrade) : null,
+            examId = selExam != null ? Hashids.Encode((int)selExam) : null,
             search, sortCol = col, sortAsc = newAsc
         })!;
     }
@@ -56,9 +58,9 @@
                             foreach (var c in ViewBag.Courses)
                             {
                                 if (selCourse == c.CourseId)
-                                { <option value="@c.CourseId" selected>@c.Name</option> }
+                                { <option value="@Hashids.Encode(c.CourseId)" selected>@c.Name</option> }
                                 else
-                                { <option value="@c.CourseId">@c.Name</option> }
+                                { <option value="@Hashids.Encode(c.CourseId)">@c.Name</option> }
                             }
                         }
                     </select>
@@ -76,9 +78,9 @@
                             foreach (var g in ViewBag.Grades)
                             {
                                 if (selGrade == g.GradeId)
-                                { <option value="@g.GradeId" selected>@g.Name</option> }
+                                { <option value="@Hashids.Encode(g.GradeId)" selected>@g.Name</option> }
                                 else
-                                { <option value="@g.GradeId">@g.Name</option> }
+                                { <option value="@Hashids.Encode(g.GradeId)">@g.Name</option> }
                             }
                         }
                     </select>
@@ -96,9 +98,9 @@
                             foreach (var e in ViewBag.Exams)
                             {
                                 if (selExam == e.ExamId)
-                                { <option value="@e.ExamId" selected>@e.Title — @e.Course?.Name / @e.Grade?.Name (@e.Date.ToString("yyyy-MM-dd"))</option> }
+                                { <option value="@Hashids.Encode(e.ExamId)" selected>@e.Title — @e.Course?.Name / @e.Grade?.Name (@e.Date.ToString("yyyy-MM-dd"))</option> }
                                 else
-                                { <option value="@e.ExamId">@e.Title — @e.Course?.Name / @e.Grade?.Name (@e.Date.ToString("yyyy-MM-dd"))</option> }
+                                { <option value="@Hashids.Encode(e.ExamId)">@e.Title — @e.Course?.Name / @e.Grade?.Name (@e.Date.ToString("yyyy-MM-dd"))</option> }
                             }
                         }
                     </select>
@@ -137,9 +139,9 @@
             <div class="flex gap-2 items-center">
                 <!-- Search -->
                 <form method="get" asp-action="Results" class="flex gap-2">
-                    <input type="hidden" name="courseId" value="@selCourse" />
-                    <input type="hidden" name="gradeId"  value="@selGrade" />
-                    <input type="hidden" name="examId"   value="@selExam" />
+                    <input type="hidden" name="courseId" value="@(selCourse != null ? Hashids.Encode((int)selCourse) : "")" />
+                    <input type="hidden" name="gradeId"  value="@(selGrade != null ? Hashids.Encode((int)selGrade) : "")" />
+                    <input type="hidden" name="examId"   value="@(selExam != null ? Hashids.Encode((int)selExam) : "")" />
                     <input type="hidden" name="sortCol"  value="@sortCol" />
                     <input type="hidden" name="sortAsc"  value="@sortAsc.ToString().ToLower()" />
                     <div class="relative">
@@ -150,12 +152,16 @@
                     <button type="submit" class="btn btn-neutral text-sm py-2 px-4">بحث</button>
                     @if (!string.IsNullOrEmpty(search))
                     {
-                        <a href="@Url.Action("Results", new { courseId = selCourse, gradeId = selGrade, examId = selExam, sortCol, sortAsc })"
+                        <a href="@Url.Action("Results", new { 
+                                courseId = selCourse != null ? Hashids.Encode((int)selCourse) : null,
+                                gradeId = selGrade != null ? Hashids.Encode((int)selGrade) : null,
+                                examId = selExam != null ? Hashids.Encode((int)selExam) : null,
+                                sortCol, sortAsc })"
                            class="btn btn-neutral text-sm py-2 px-3 text-rose-500">✕</a>
                     }
                 </form>
                 <!-- Export Excel -->
-                <a href="@Url.Action("ExportExcel", new { examId = selExam })"
+                <a href="@Url.Action("ExportExcel", new { examId = selExam != null ? Hashids.Encode((int)selExam) : null })"
                    class="btn btn-neutral text-sm py-2.5 px-4 flex items-center gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50">
                     <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> تصدير Excel
                 </a>

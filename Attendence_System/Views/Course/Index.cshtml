@@ -31,13 +31,13 @@
                         </div>
                         <div class="flex gap-2 z-20 relative">
                             <button type="button" class="action-btn action-btn-primary js-edit-course" 
-                                    data-id="@course.CourseId" 
+                                    data-id="@Hashids.Encode(course.CourseId)" 
                                     data-name="@course.Name" 
                                     data-grades="@(course.CourseGrades != null ? string.Join(",", course.CourseGrades.Select(g => g.GradeId)) : "")" 
                                     title="تعديل المادة">
                                 <i data-lucide="pencil" class="w-4 h-4"></i>
                             </button>
-                            <button type="button" class="action-btn action-btn-danger js-delete" data-id="@course.CourseId" data-type="course" title="حذف المادة">
+                            <button type="button" class="action-btn action-btn-danger js-delete" data-id="@Hashids.Encode(course.CourseId)" data-type="course" title="حذف المادة">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
                         </div>

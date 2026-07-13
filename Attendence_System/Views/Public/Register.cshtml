@@ -95,7 +95,7 @@
                     {
                         foreach (var grade in ViewBag.Grades)
                         {
-                            <option value="@grade.GradeId" data-minage="@grade.MinAge" data-maxage="@grade.MaxAge">@grade.Name</option>
+                            <option value="@Hashids.Encode(grade.GradeId)" data-minage="@grade.MinAge" data-maxage="@grade.MaxAge">@grade.Name</option>
                         }
                     }
                 </select>

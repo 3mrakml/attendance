@@ -122,7 +122,7 @@ namespace Attendence_System.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("Courses");
+                    b.ToTable("Courses", (string)null);
                 });
 
             modelBuilder.Entity("Attendence_System.Models.CourseGrade", b =>
@@ -143,7 +143,7 @@ namespace Attendence_System.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("CourseGrades");
+                    b.ToTable("CourseGrades", (string)null);
                 });
 
             modelBuilder.Entity("Attendence_System.Models.Exam", b =>
@@ -182,7 +182,7 @@ namespace Attendence_System.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("Exams");
+                    b.ToTable("Exams", (string)null);
                 });
 
             modelBuilder.Entity("Attendence_System.Models.Grade", b =>
@@ -217,7 +217,7 @@ namespace Attendence_System.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("Grades");
+                    b.ToTable("Grades", (string)null);
                 });
 
             modelBuilder.Entity("Attendence_System.Models.Lecture", b =>
@@ -259,7 +259,7 @@ namespace Attendence_System.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("Lectures");
+                    b.ToTable("Lectures", (string)null);
                 });
 
             modelBuilder.Entity("Attendence_System.Models.LectureGrade", b =>
@@ -280,7 +280,7 @@ namespace Attendence_System.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("LectureGrades");
+                    b.ToTable("LectureGrades", (string)null);
                 });
 
             modelBuilder.Entity("Attendence_System.Models.Student", b =>
@@ -326,7 +326,7 @@ namespace Attendence_System.Migrations
                     b.HasIndex("QRToken", "TenantId")
                         .IsUnique();
 
-                    b.ToTable("Students");
+                    b.ToTable("Students", (string)null);
                 });
 
             modelBuilder.Entity("Attendence_System.Models.StudentExam", b =>
@@ -359,7 +359,7 @@ namespace Attendence_System.Migrations
                     b.HasIndex("StudentId", "ExamId")
                         .IsUnique();
 
-                    b.ToTable("StudentExams");
+                    b.ToTable("StudentExams", (string)null);
                 });
 
             modelBuilder.Entity("Attendence_System.Models.StudentLecture", b =>
@@ -385,7 +385,7 @@ namespace Attendence_System.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("StudentLectures");
+                    b.ToTable("StudentLectures", (string)null);
                 });
 
             modelBuilder.Entity("Attendence_System.Models.SystemSetting", b =>
@@ -403,7 +403,7 @@ namespace Attendence_System.Migrations
 
                     b.HasKey("TenantId", "Key");
 
-                    b.ToTable("SystemSettings");
+                    b.ToTable("SystemSettings", (string)null);
                 });
 
             modelBuilder.Entity("Attendence_System.Models.Tenant", b =>
@@ -427,7 +427,7 @@ namespace Attendence_System.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Tenants");
+                    b.ToTable("Tenants", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

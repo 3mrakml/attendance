@@ -113,7 +113,7 @@
                         {
                             foreach (var course in ViewBag.Courses)
                             {
-                                <option value="@course.CourseId">@course.Name</option>
+                                <option value="@Hashids.Encode(course.CourseId)">@course.Name</option>
                             }
                         }
                     </select>
@@ -126,7 +126,7 @@
                         {
                             foreach (var grade in ViewBag.Grades)
                             {
-                                <option value="@grade.GradeId">@grade.Name</option>
+                                <option value="@Hashids.Encode(grade.GradeId)">@grade.Name</option>
                             }
                         }
                     </select>

@@ -114,9 +114,10 @@ namespace Attendence_System.Controllers
             {
                 var courses = await _courseService.GetAllCoursesAsync();
                 var grades = await _gradeService.GetAllGradesAsync();
+                var hashids = HttpContext.RequestServices.GetRequiredService<IHashidService>();
                 model.Courses = courses.Select(c => new SelectListItem
                 {
-                    Value = c.CourseId.ToString(),
+                    Value = hashids.Encode(c.CourseId),
                     Text = c.Name
                 }).ToList();
                 model.Grades = grades.Select(g => new SelectListItem
@@ -138,16 +139,18 @@ namespace Attendence_System.Controllers
 
                 lecture = await _lectureService.CreateLectureAsync(lecture, model.GradeIds!);
 
-                return RedirectToAction("Scan", new { id = lecture.LectureId });
+                var encodedId = HttpContext.RequestServices.GetRequiredService<IHashidService>().Encode(lecture.LectureId);
+                return RedirectToAction("Scan", new { id = encodedId });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                ModelState.AddModelError("", "حدث خطأ أثناء إنشاء المحاضرة. قد يكون بسبب عدم حفظ البيانات بشكل صحيح.");
+                ModelState.AddModelError("", $"حدث خطأ أثناء إنشاء المحاضرة: {ex.Message} \n {ex.InnerException?.Message}");
                 var courses = await _courseService.GetAllCoursesAsync();
                 var grades = await _gradeService.GetAllGradesAsync();
+                var hashids = HttpContext.RequestServices.GetRequiredService<IHashidService>();
                 model.Courses = courses.Select(c => new SelectListItem
                 {
-                    Value = c.CourseId.ToString(),
+                    Value = hashids.Encode(c.CourseId),
                     Text = c.Name
                 }).ToList();
                 model.Grades = grades.Select(g => new SelectListItem
@@ -163,7 +166,8 @@ namespace Attendence_System.Controllers
         public async Task<IActionResult> CloseAttendance(int id)
         {
             await _lectureService.CloseAttendanceAsync(id);
-            return RedirectToAction(nameof(Students), new { id });
+            var encodedId = HttpContext.RequestServices.GetRequiredService<IHashidService>().Encode(id);
+            return RedirectToAction(nameof(Students), new { id = encodedId });
         }
 
         [HttpGet]
@@ -174,7 +178,8 @@ namespace Attendence_System.Controllers
 
             var courses = await _courseService.GetCommonCoursesByGradesAsync(gradeIds);
 
-            var courseList = courses.Select(c => new { value = c.CourseId, text = c.Name }).ToList();
+            var hashids = HttpContext.RequestServices.GetRequiredService<IHashidService>();
+            var courseList = courses.Select(c => new { value = hashids.Encode(c.CourseId), text = c.Name }).ToList();
             return Json(courseList);
         }
 
@@ -189,7 +194,8 @@ namespace Attendence_System.Controllers
 
             var studentsStatus = await _lectureService.GetStudentAttendanceStatusForLectureAsync(id);
 
-            var routeParams = new Dictionary<string, string> { { "id", id.ToString() } };
+            var hashids = HttpContext.RequestServices.GetRequiredService<IHashidService>();
+            var routeParams = new Dictionary<string, string> { { "id", hashids.Encode(id) } };
             var (paginatedStudents, paginationInfo) = studentsStatus.Paginate(page, 50, "Students", "Lecture", routeParams);
 
             var model = new LectureWithStudentsViewModel

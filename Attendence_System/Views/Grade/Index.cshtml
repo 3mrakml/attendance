@@ -25,7 +25,7 @@
         {
             @foreach (var grade in Model)
             {
-                <a href="@Url.Action("Index", "Report", new { gradeId = grade.GradeId })" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 group flex flex-col h-full relative overflow-hidden js-delete-parent block">
+                <a href="@Url.Action("Index", "Report", new { gradeId = Hashids.Encode(grade.GradeId) })" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 group flex flex-col h-full relative overflow-hidden js-delete-parent block">
                     <!-- Decorative element -->
                     <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-amber-100/50 to-transparent rounded-bl-full -mr-4 -mt-4 opacity-50"></div>
                     
@@ -35,7 +35,7 @@
                         </div>
                         <div class="flex gap-2 z-20 relative">
                             <button type="button" class="action-btn action-btn-primary js-edit-grade" 
-                                    data-id="@grade.GradeId" 
+                                    data-id="@Hashids.Encode(grade.GradeId)" 
                                     data-name="@grade.Name" 
                                     data-code="@grade.Code" 
                                     data-minage="@grade.MinAge" 
@@ -43,7 +43,7 @@
                                     title="تعديل الصف" onclick="event.preventDefault();">
                                 <i data-lucide="pencil" class="w-4 h-4"></i>
                             </button>
-                            <button type="button" class="action-btn action-btn-danger js-delete" data-id="@grade.GradeId" data-type="grade" title="حذف الصف" onclick="event.preventDefault();">
+                            <button type="button" class="action-btn action-btn-danger js-delete" data-id="@Hashids.Encode(grade.GradeId)" data-type="grade" title="حذف الصف" onclick="event.preventDefault();">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
                         </div>

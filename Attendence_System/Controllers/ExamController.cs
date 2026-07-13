@@ -61,7 +61,8 @@ namespace Attendence_System.Controllers
 
             await _examService.CreateExamAsync(exam, tenantId);
             TempData["SuccessMessage"] = "تم إنشاء الامتحان بنجاح.";
-            return RedirectToAction(nameof(Scores), new { id = exam.ExamId });
+            var encodedId = HttpContext.RequestServices.GetRequiredService<IHashidService>().Encode(exam.ExamId);
+            return RedirectToAction(nameof(Scores), new { id = encodedId });
         }
 
         [HttpGet]
@@ -72,7 +73,8 @@ namespace Attendence_System.Controllers
 
             var studentExams = await _examService.GetOrCreateStudentExamsAsync(id);
             
-            var routeParams = new Dictionary<string, string> { { "id", id.ToString() } };
+            var encodedId = HttpContext.RequestServices.GetRequiredService<IHashidService>().Encode(id);
+            var routeParams = new Dictionary<string, string> { { "id", encodedId } };
             var (paginatedExams, paginationInfo) = studentExams.Paginate(page, 50, "Scores", "Exam", routeParams);
 
             ViewBag.Exam = exam;
@@ -87,7 +89,8 @@ namespace Attendence_System.Controllers
         {
             await _examService.SaveStudentScoresAsync(examId, scores);
             TempData["SuccessMessage"] = "تم حفظ الدرجات بنجاح.";
-            return RedirectToAction(nameof(Scores), new { id = examId, page = page });
+            var encodedId = HttpContext.RequestServices.GetRequiredService<IHashidService>().Encode(examId);
+            return RedirectToAction(nameof(Scores), new { id = encodedId, page = page });
         }
 
         [HttpPost]
@@ -147,11 +150,12 @@ namespace Attendence_System.Controllers
                 }
             }
 
+            var hashids = HttpContext.RequestServices.GetRequiredService<IHashidService>();
             var routeParams = new Dictionary<string, string>
             {
-                { "courseId", courseId?.ToString() },
-                { "gradeId", gradeId?.ToString() },
-                { "examId", examId?.ToString() },
+                { "courseId", courseId.HasValue ? hashids.Encode(courseId.Value) : null },
+                { "gradeId", gradeId.HasValue ? hashids.Encode(gradeId.Value) : null },
+                { "examId", examId.HasValue ? hashids.Encode(examId.Value) : null },
                 { "search", search },
                 { "sortCol", sortCol },
                 { "sortAsc", sortAsc.ToString().ToLower() }

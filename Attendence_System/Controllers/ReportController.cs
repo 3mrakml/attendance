@@ -97,9 +97,10 @@ namespace Attendence_System.Controllers
             var studentsReport = await GetCachedReportAsync(gradeId);
             studentsReport = SortReport(studentsReport, sortCol, sortAsc);
 
+            var hashids = HttpContext.RequestServices.GetRequiredService<IHashidService>();
             var routeParams = new Dictionary<string, string>
             {
-                { "gradeId", gradeId?.ToString() },
+                { "gradeId", gradeId.HasValue ? hashids.Encode(gradeId.Value) : null },
                 { "sortCol", sortCol?.ToString() },
                 { "sortAsc", sortAsc.ToString().ToLower() }
             };
@@ -204,9 +205,10 @@ namespace Attendence_System.Controllers
             var studentsReport = await GetCachedReportAsync(gradeId);
             studentsReport = SortReport(studentsReport, sortCol, sortAsc);
 
+            var hashids = HttpContext.RequestServices.GetRequiredService<IHashidService>();
             var routeParams = new Dictionary<string, string>
             {
-                { "gradeId", gradeId?.ToString() },
+                { "gradeId", gradeId.HasValue ? hashids.Encode(gradeId.Value) : null },
                 { "sortCol", sortCol?.ToString() },
                 { "sortAsc", sortAsc.ToString().ToLower() }
             };
